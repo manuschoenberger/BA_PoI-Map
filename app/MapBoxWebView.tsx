@@ -1,40 +1,50 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import { WebView } from "react-native-webview";
 import { MAPBOX_API_KEY } from "@env";
+import { LocationObjectCoords } from "expo-location";
 
-const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.js"></script>
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.css" rel="stylesheet" />
-    <style>
-        body { margin: 0; padding: 0; }
-        #map { width: 100vw; height: 100vh; }
-    </style>
-</head>
-<body>
-    <div id="map"></div>
-    <script>
-        mapboxgl.accessToken = '${MAPBOX_API_KEY}';
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/streets-v11',
-            center: [-122.4324, 37.78825], // Longitude, Latitude
-            zoom: 12
-        });
-    </script>
-</body>
-</html>
-`;
+interface MapBoxWebViewProps {
+    location: LocationObjectCoords;
+}
 
-export default function Map() {
+export default function MapBoxWebView({ location }: MapBoxWebViewProps) {
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.js"></script>
+        <link href="https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.css" rel="stylesheet" />
+        <style>
+            body { margin: 0; padding: 0; }
+            #map { width: 100vw; height: 100vh; }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        <script>
+            mapboxgl.accessToken = '${MAPBOX_API_KEY}';
+            const map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v11',
+                center: [${location.longitude}, ${location.latitude}],
+                zoom: 12
+            });
+
+            new mapboxgl.Marker()
+                .setLngLat([${location.longitude}, ${location.latitude}])
+                .setPopup(new mapboxgl.Popup().setText("You are here"))
+                .addTo(map);
+        </script>
+    </body>
+    </html>
+    `;
+
     return (
         <View style={styles.container}>
-            <WebView originWhitelist={['*']} source={{ html }} style={styles.map} />
+            <WebView originWhitelist={["*"]} source={{ html }} style={styles.map} />
         </View>
     );
 }
