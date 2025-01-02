@@ -2,12 +2,15 @@ import React, { useEffect, useState } from "react";
 import { Button, View, StyleSheet, Text, ActivityIndicator } from "react-native";
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
-import Map from "./Map";
+import GoogleMapsMap from "./GoogleMapsMap";
+import { fetchGooglePOIs, fetchMapboxPOIs, fetchOSMPOIs, POI } from "./apiServices";
 
 export default function Index() {
     const [useMapBox, setUseMapBox] = useState(true);
     const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
+    const [pois, setPois] = useState<POI[]>([]);
+    const [dataSource, setDataSource] = useState<"google" | "mapbox" | "osm">("google");
 
     useEffect(() => {
         (async () => {
@@ -21,6 +24,28 @@ export default function Index() {
             setLocation(currentLocation.coords);
         })();
     }, []);
+
+    useEffect(() => {
+        if (location) {
+            // Fetch POIs based on the selected data source
+            const fetchData = async () => {
+                let data: POI[] = [];
+                switch (dataSource) {
+                    case "google":
+                        data = await fetchGooglePOIs(location.latitude, location.longitude);
+                        break;
+                    case "mapbox":
+                        data = await fetchMapboxPOIs(location.latitude, location.longitude);
+                        break;
+                    case "osm":
+                        data = await fetchOSMPOIs(location.latitude, location.longitude);
+                        break;
+                }
+                setPois(data);
+            };
+            fetchData();
+        }
+    }, [location, dataSource]);
 
     if (!location && !errorMsg) {
         return (
@@ -46,8 +71,20 @@ export default function Index() {
                     title={`Switch to ${useMapBox ? "Google Maps" : "MapBox"}`}
                     onPress={() => setUseMapBox(!useMapBox)}
                 />
+                <Button
+                    title={`PoI Source: ${dataSource}`}
+                    onPress={() =>
+                        setDataSource(
+                            dataSource === "google" ? "mapbox" : dataSource === "mapbox" ? "osm" : "google"
+                        )
+                    }
+                />
             </View>
-            {useMapBox ? <MapBoxWebView location={location} /> : <Map location={location} />}
+            {useMapBox ? (
+                <MapBoxWebView location={location} pois={pois} />
+            ) : (
+                <GoogleMapsMap location={location} pois={pois} />
+            )}
         </View>
     );
 }

@@ -3,12 +3,25 @@ import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { MAPBOX_API_KEY } from "@env";
 import { LocationObjectCoords } from "expo-location";
+import { POI } from "./apiServices";
 
 interface MapBoxWebViewProps {
     location: LocationObjectCoords;
+    pois: POI[];
 }
 
-export default function MapBoxWebView({ location }: MapBoxWebViewProps) {
+export default function MapBoxWebView({ location, pois }: MapBoxWebViewProps) {
+    const poiMarkers = pois
+        .map(
+            (poi) => `
+            new mapboxgl.Marker()
+                .setLngLat([${poi.longitude}, ${poi.latitude}])
+                .setPopup(new mapboxgl.Popup().setText("${poi.name}"))
+                .addTo(map);
+        `
+        )
+        .join("");
+
     const html = `
     <!DOCTYPE html>
     <html>
@@ -33,10 +46,14 @@ export default function MapBoxWebView({ location }: MapBoxWebViewProps) {
                 zoom: 12
             });
 
-            new mapboxgl.Marker()
+            // Add current location marker
+            new mapboxgl.Marker({ color: 'blue' })
                 .setLngLat([${location.longitude}, ${location.latitude}])
                 .setPopup(new mapboxgl.Popup().setText("You are here"))
                 .addTo(map);
+
+            // Add POI markers
+            ${poiMarkers}
         </script>
     </body>
     </html>

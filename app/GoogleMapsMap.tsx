@@ -2,12 +2,14 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
+import { POI } from "./apiServices";
 
 interface MapProps {
     location: LocationObjectCoords;
+    pois: POI[];
 }
 
-export default function Map({ location }: MapProps) {
+export default function GoogleMapsMap({ location, pois }: MapProps) {
     return (
         <View style={styles.container}>
             <MapView
@@ -27,6 +29,13 @@ export default function Map({ location }: MapProps) {
                     title="You are here"
                     description="Current location"
                 />
+                {pois.map((poi) => (
+                    <Marker
+                        key={poi.id}
+                        coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
+                        title={poi.name}
+                    />
+                ))}
             </MapView>
         </View>
     );
