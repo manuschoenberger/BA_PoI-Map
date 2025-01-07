@@ -3,14 +3,14 @@ import { Button, View, StyleSheet, Text, ActivityIndicator } from "react-native"
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
 import GoogleMapsMap from "./GoogleMapsMap";
-import { fetchGooglePOIs, fetchMapboxPOIs, fetchOSMPOIs, POI } from "./apiServices";
+import { fetchGooglePOIs, fetchOSMPOIs, POI } from "./utils/apiServices";
 
 export default function Index() {
     const [useMapBox, setUseMapBox] = useState(true);
     const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
     const [pois, setPois] = useState<POI[]>([]);
-    const [dataSource, setDataSource] = useState<"google" | "mapbox" | "osm">("google");
+    const [dataSource, setDataSource] = useState<"google" | "osm">("google"); // Removed "mapbox" as a data source
 
     useEffect(() => {
         (async () => {
@@ -33,9 +33,6 @@ export default function Index() {
                 switch (dataSource) {
                     case "google":
                         data = await fetchGooglePOIs(location.latitude, location.longitude);
-                        break;
-                    case "mapbox":
-                        data = await fetchMapboxPOIs(location.latitude, location.longitude);
                         break;
                     case "osm":
                         data = await fetchOSMPOIs(location.latitude, location.longitude);
@@ -75,15 +72,15 @@ export default function Index() {
                     title={`PoI Source: ${dataSource}`}
                     onPress={() =>
                         setDataSource(
-                            dataSource === "google" ? "mapbox" : dataSource === "mapbox" ? "osm" : "google"
+                            dataSource === "google" ? "osm" : "google" // Switching between Google and OSM only
                         )
                     }
                 />
             </View>
             {useMapBox ? (
-                <MapBoxWebView location={location} pois={pois} />
+                location && <MapBoxWebView location={location} pois={pois} />
             ) : (
-                <GoogleMapsMap location={location} pois={pois} />
+                location && <GoogleMapsMap location={location} pois={pois} />
             )}
         </View>
     );

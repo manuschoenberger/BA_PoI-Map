@@ -1,9 +1,10 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
-import { MAPBOX_API_KEY } from "@env";
 import { LocationObjectCoords } from "expo-location";
-import { POI } from "./apiServices";
+import { POI } from "./utils/apiServices";
+
+const apiKey = process.env.MAPBOX_API_KEY;
 
 interface MapBoxWebViewProps {
     location: LocationObjectCoords;
@@ -38,7 +39,7 @@ export default function MapBoxWebView({ location, pois }: MapBoxWebViewProps) {
     <body>
         <div id="map"></div>
         <script>
-            mapboxgl.accessToken = '${MAPBOX_API_KEY}';
+            mapboxgl.accessToken = '${apiKey}';
             const map = new mapboxgl.Map({
                 container: 'map',
                 style: 'mapbox://styles/mapbox/streets-v11',

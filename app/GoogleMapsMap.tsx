@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
-import { POI } from "./apiServices";
+import { POI } from "./utils/apiServices";
 
 interface MapProps {
     location: LocationObjectCoords;
