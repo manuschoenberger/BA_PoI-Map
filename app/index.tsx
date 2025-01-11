@@ -3,14 +3,15 @@ import { Button, View, StyleSheet, Text, ActivityIndicator } from "react-native"
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
 import GoogleMapsMap from "./GoogleMapsMap";
-import { fetchGooglePOIs, fetchOSMPOIs, POI } from "./utils/apiServices";
+import { POI, fetchGooglePOIs, fetchOSMPOIs, fetchMapboxIsochrone, fetchGoogleIsochrone } from "./utils/apiServices";
 
 export default function Index() {
     const [useMapBox, setUseMapBox] = useState(true);
     const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
     const [pois, setPois] = useState<POI[]>([]);
-    const [dataSource, setDataSource] = useState<"google" | "osm">("google"); // Removed "mapbox" as a data source
+    const [dataSource, setDataSource] = useState<"google" | "osm">("google");
+    const [isochrone, setIsochrone] = useState<{ coordinates: [number, number][] } | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -44,6 +45,25 @@ export default function Index() {
         }
     }, [location, dataSource]);
 
+    useEffect(() => {
+        if (location) {
+            const fetchIsochroneData = async () => {
+                try {
+                    let data;
+                    if (useMapBox) {
+                        data = await fetchMapboxIsochrone(location.latitude, location.longitude);
+                    } else {
+                        data = await fetchGoogleIsochrone(location.latitude, location.longitude);
+                    }
+                    setIsochrone(data);
+                } catch (error) {
+                    console.error("Error fetching isochrone data:", error);
+                }
+            };
+            fetchIsochroneData();
+        }
+    }, [location, useMapBox]);
+
     if (!location && !errorMsg) {
         return (
             <View style={styles.loader}>
@@ -72,15 +92,15 @@ export default function Index() {
                     title={`PoI Source: ${dataSource}`}
                     onPress={() =>
                         setDataSource(
-                            dataSource === "google" ? "osm" : "google" // Switching between Google and OSM only
+                            dataSource === "google" ? "osm" : "google"
                         )
                     }
                 />
             </View>
             {useMapBox ? (
-                location && <MapBoxWebView location={location} pois={pois} />
+                location && isochrone && <MapBoxWebView location={location} pois={pois} isochrone={isochrone} />
             ) : (
-                location && <GoogleMapsMap location={location} pois={pois} />
+                location && isochrone && <GoogleMapsMap location={location} pois={pois} isochrone={isochrone} />
             )}
         </View>
     );

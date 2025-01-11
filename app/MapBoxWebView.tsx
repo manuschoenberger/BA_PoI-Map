@@ -2,16 +2,17 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationObjectCoords } from "expo-location";
-import { POI } from "./utils/apiServices";
+import { POI, Isochrone } from "./utils/apiServices";
 
-const apiKey = process.env.MAPBOX_API_KEY;
+const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
 
 interface MapBoxWebViewProps {
     location: LocationObjectCoords;
     pois: POI[];
+    isochrone: Isochrone;
 }
 
-export default function MapBoxWebView({ location, pois }: MapBoxWebViewProps) {
+export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebViewProps) {
     const poiMarkers = pois
         .map(
             (poi) => `
@@ -22,6 +23,36 @@ export default function MapBoxWebView({ location, pois }: MapBoxWebViewProps) {
         `
         )
         .join("");
+
+    const isochronePolygon = `
+        map.on('load', () => {
+            map.addSource('iso', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: [{
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [${JSON.stringify(isochrone.coordinates)}]
+                        },
+                        properties: {}
+                    }]
+                }
+            });
+
+            map.addLayer({
+                id: 'isoLayer',
+                type: 'fill',
+                source: 'iso',
+                layout: {},
+                paint: {
+                    'fill-color': '#007cbf',
+                    'fill-opacity': 0.3
+                }
+            });
+        });
+    `;
 
     const html = `
     <!DOCTYPE html>
@@ -55,6 +86,9 @@ export default function MapBoxWebView({ location, pois }: MapBoxWebViewProps) {
 
             // Add POI markers
             ${poiMarkers}
+
+            // Add Isochrone Polygon
+            ${isochronePolygon}
         </script>
     </body>
     </html>

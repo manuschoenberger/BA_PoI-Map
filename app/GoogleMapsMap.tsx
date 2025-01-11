@@ -1,15 +1,16 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Polygon } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
-import { POI } from "./utils/apiServices";
+import { POI, Isochrone } from "./utils/apiServices";
 
 interface MapProps {
     location: LocationObjectCoords;
     pois: POI[];
+    isochrone: Isochrone;
 }
 
-export default function GoogleMapsMap({ location, pois }: MapProps) {
+export default function GoogleMapsMap({ location, pois, isochrone }: MapProps) {
     return (
         <View style={styles.container}>
             <MapView
@@ -36,6 +37,12 @@ export default function GoogleMapsMap({ location, pois }: MapProps) {
                         title={poi.name}
                     />
                 ))}
+                <Polygon
+                    coordinates={isochrone.coordinates.map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
+                    fillColor="rgba(0, 150, 255, 0.3)"
+                    strokeColor="rgba(0, 150, 255, 0.8)"
+                    strokeWidth={2}
+                />
             </MapView>
         </View>
     );
