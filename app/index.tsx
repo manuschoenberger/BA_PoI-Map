@@ -3,7 +3,7 @@ import { Button, View, StyleSheet, Text, ActivityIndicator } from "react-native"
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
 import GoogleMapsMap from "./GoogleMapsMap";
-import { POI, fetchGooglePOIs, fetchOSMPOIs, fetchMapboxIsochrone, fetchGoogleIsochrone } from "./utils/apiServices";
+import { POI, fetchGooglePOIs, fetchOSMPOIs, fetchMapboxIsochrone, filterPOIsWithinIsochrone } from "./utils/apiServices";
 
 export default function Index() {
     const [useMapBox, setUseMapBox] = useState(true);
@@ -28,33 +28,9 @@ export default function Index() {
 
     useEffect(() => {
         if (location) {
-            // Fetch POIs based on the selected data source
-            const fetchData = async () => {
-                let data: POI[] = [];
-                switch (dataSource) {
-                    case "google":
-                        data = await fetchGooglePOIs(location.latitude, location.longitude);
-                        break;
-                    case "osm":
-                        data = await fetchOSMPOIs(location.latitude, location.longitude);
-                        break;
-                }
-                setPois(data);
-            };
-            fetchData();
-        }
-    }, [location, dataSource]);
-
-    useEffect(() => {
-        if (location) {
             const fetchIsochroneData = async () => {
                 try {
-                    let data;
-                    if (useMapBox) {
-                        data = await fetchMapboxIsochrone(location.latitude, location.longitude);
-                    } else {
-                        data = await fetchGoogleIsochrone(location.latitude, location.longitude);
-                    }
+                    const data = await fetchMapboxIsochrone(location.latitude, location.longitude);
                     setIsochrone(data);
                 } catch (error) {
                     console.error("Error fetching isochrone data:", error);
@@ -62,7 +38,29 @@ export default function Index() {
             };
             fetchIsochroneData();
         }
-    }, [location, useMapBox]);
+    }, [location]);
+
+    useEffect(() => {
+        if (location && isochrone) {
+            const fetchData = async () => {
+                try {
+                    let data: POI[] = [];
+                    if (dataSource === "google") {
+                        data = await fetchGooglePOIs(location.latitude, location.longitude);
+                    } else {
+                        data = await fetchOSMPOIs(location.latitude, location.longitude);
+                    }
+
+                    // Filter POIs within the isochrone
+                    const filteredPOIs = filterPOIsWithinIsochrone(data, isochrone);
+                    setPois(filteredPOIs);
+                } catch (error) {
+                    console.error("Error fetching POIs:", error);
+                }
+            };
+            fetchData();
+        }
+    }, [location, isochrone, dataSource]);
 
     if (!location && !errorMsg) {
         return (
@@ -91,9 +89,7 @@ export default function Index() {
                 <Button
                     title={`PoI Source: ${dataSource}`}
                     onPress={() =>
-                        setDataSource(
-                            dataSource === "google" ? "osm" : "google"
-                        )
+                        setDataSource(dataSource === "google" ? "osm" : "google")
                     }
                 />
             </View>
