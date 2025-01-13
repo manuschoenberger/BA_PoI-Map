@@ -51,6 +51,30 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
                     'fill-opacity': 0.3
                 }
             });
+
+            // Add blue dot for current location
+            map.addSource('currentLocation', {
+                type: 'geojson',
+                data: {
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [${location.longitude}, ${location.latitude}]
+                    }
+                }
+            });
+
+            map.addLayer({
+                id: 'currentLocationLayer',
+                type: 'circle',
+                source: 'currentLocation',
+                paint: {
+                    'circle-radius': 8,
+                    'circle-color': '#0000ff',
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
         });
     `;
 
@@ -77,12 +101,6 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
                 center: [${location.longitude}, ${location.latitude}],
                 zoom: 12
             });
-
-            // Add current location marker
-            new mapboxgl.Marker({ color: 'blue' })
-                .setLngLat([${location.longitude}, ${location.latitude}])
-                .setPopup(new mapboxgl.Popup().setText("You are here"))
-                .addTo(map);
 
             // Add POI markers
             ${poiMarkers}

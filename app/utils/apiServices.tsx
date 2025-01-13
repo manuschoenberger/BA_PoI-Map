@@ -15,7 +15,7 @@ export interface Isochrone {
     coordinates: [number, number][]; // Array of [longitude, latitude] coordinates
 }
 
-// Fetch POIs from Google Maps (broad area)
+// Fetch POIs from Google Maps
 export const fetchGooglePOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
     const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
     const radius = 49999; // Fetch within 50 km
@@ -31,15 +31,16 @@ export const fetchGooglePOIs = async (latitude: number, longitude: number): Prom
     }));
 };
 
+// Fetch POIs from OpenStreetMap
 export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
     const radius = 0.1; // Approximate degree radius (~10 km) //TODO: Later change to 50km
     const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity](around:10000,${latitude},${longitude});out;`;
 
     const response = await axios.get(url);
 
-    // Filter out "Unnamed POI"
+    // Filter out unnamed POIs
     return response.data.elements
-        .filter((element: any) => element.tags.name) // Only include named POIs
+        .filter((element: any) => element.tags.name)
         .map((element: any) => ({
             id: element.id,
             name: element.tags.name,

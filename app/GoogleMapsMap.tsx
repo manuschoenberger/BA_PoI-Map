@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, { Marker, Polygon } from "react-native-maps";
+import MapView, { Polygon, Marker } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
 
@@ -21,15 +21,9 @@ export default function GoogleMapsMap({ location, pois, isochrone }: MapProps) {
                     latitudeDelta: 0.05,
                     longitudeDelta: 0.05,
                 }}
+                showsUserLocation={true}
+                userLocationUpdateInterval={30000}
             >
-                <Marker
-                    coordinate={{
-                        latitude: location.latitude,
-                        longitude: location.longitude,
-                    }}
-                    title="You are here"
-                    description="Current location"
-                />
                 {pois.map((poi) => (
                     <Marker
                         key={poi.id}
