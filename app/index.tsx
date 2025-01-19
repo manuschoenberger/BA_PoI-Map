@@ -22,7 +22,8 @@ export default function Index() {
     const [pois, setPois] = useState<POI[]>([]);
     const [dataSource, setDataSource] = useState<"google" | "osm">("google");
     const [isochrone, setIsochrone] = useState<{ coordinates: [number, number][] } | null>(null);
-    const [isModalVisible, setIsModalVisible] = useState(false); // Manage modal visibility
+    const [selectedTime, setSelectedTime] = useState(10); // Default is 10 minutes
+    const [isModalVisible, setIsModalVisible] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -41,7 +42,7 @@ export default function Index() {
         if (location) {
             const fetchIsochroneData = async () => {
                 try {
-                    const data = await fetchMapboxIsochrone(location.latitude, location.longitude);
+                    const data = await fetchMapboxIsochrone(location.latitude, location.longitude, selectedTime);
                     setIsochrone(data);
                 } catch (error) {
                     console.error("Error fetching isochrone data:", error);
@@ -49,7 +50,7 @@ export default function Index() {
             };
             fetchIsochroneData();
         }
-    }, [location]);
+    }, [location, selectedTime]); // Re-fetch isochrone when selectedTime changes
 
     useEffect(() => {
         if (location && isochrone) {
@@ -100,6 +101,8 @@ export default function Index() {
         { label: "OSM POI", value: "osm" },
     ];
 
+    const timeOptions = [10, 20, 30]; // Available timestamps
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Menu Bar */}
@@ -126,7 +129,6 @@ export default function Index() {
                                 <Pressable
                                     onPress={() => {
                                         setUseMapBox(item.value);
-                                        setIsModalVisible(false);
                                     }}
                                 >
                                     <Text style={styles.radioOption}>
@@ -143,11 +145,26 @@ export default function Index() {
                                 <Pressable
                                     onPress={() => {
                                         setDataSource(item.value as "google" | "osm");
-                                        setIsModalVisible(false);
                                     }}
                                 >
                                     <Text style={styles.radioOption}>
                                         {dataSource === item.value ? "◉" : "○"} {item.label}
+                                    </Text>
+                                </Pressable>
+                            )}
+                        />
+                        <Text style={styles.modalTitle}>Select Isochrone Time</Text>
+                        <FlatList
+                            data={timeOptions}
+                            keyExtractor={(item) => item.toString()}
+                            renderItem={({ item }) => (
+                                <Pressable
+                                    onPress={() => {
+                                        setSelectedTime(item);
+                                    }}
+                                >
+                                    <Text style={styles.radioOption}>
+                                        {selectedTime === item ? "◉" : "○"} {item} minutes
                                     </Text>
                                 </Pressable>
                             )}
@@ -221,3 +238,4 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
 });
+

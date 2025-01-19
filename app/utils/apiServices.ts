@@ -33,8 +33,8 @@ export const fetchGooglePOIs = async (latitude: number, longitude: number): Prom
 
 // Fetch POIs from OpenStreetMap
 export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
-    const radius = 0.1; // Approximate degree radius (~10 km) //TODO: Later change to 50km
-    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity](around:10000,${latitude},${longitude});out;`;
+    const radius = 15000; // Approximate degree radius (~15 km)
+    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity](around:${radius},${latitude},${longitude});out;`;
 
     const response = await axios.get(url);
 
@@ -58,10 +58,14 @@ export const filterPOIsWithinIsochrone = (pois: POI[], isochrone: Isochrone): PO
     });
 };
 
-// Fetch isochrone data from Mapbox
-export const fetchMapboxIsochrone = async (latitude: number, longitude: number): Promise<Isochrone> => {
+// Fetch isochrone data from Mapbox with dynamic contours_minutes
+export const fetchMapboxIsochrone = async (
+    latitude: number,
+    longitude: number,
+    contoursMinutes: number
+): Promise<Isochrone> => {
     const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
-    const url = `https://api.mapbox.com/isochrone/v1/mapbox/driving/${longitude},${latitude}?contours_minutes=10&polygons=true&access_token=${apiKey}`;
+    const url = `https://api.mapbox.com/isochrone/v1/mapbox/driving/${longitude},${latitude}?contours_minutes=${contoursMinutes}&polygons=true&access_token=${apiKey}`;
 
     const response = await axios.get(url);
     const coordinates = response.data.features[0].geometry.coordinates[0];
