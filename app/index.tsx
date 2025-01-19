@@ -13,7 +13,7 @@ import {
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
 import GoogleMapsMap from "./GoogleMapsMap";
-import { POI, fetchGooglePOIs, fetchOSMPOIs, fetchMapboxIsochrone, filterPOIsWithinIsochrone } from "./utils/apiServices";
+import { POI, fetchGooglePOIs, fetchOSMPOIs, fetchMapboxIsochrone, filterPOIsWithinIsochrone, fetchTravelTimeIsochrone } from "./utils/apiServices";
 
 export default function Index() {
     const [useMapBox, setUseMapBox] = useState(true);
@@ -23,6 +23,7 @@ export default function Index() {
     const [dataSource, setDataSource] = useState<"google" | "osm">("google");
     const [isochrone, setIsochrone] = useState<{ coordinates: [number, number][] } | null>(null);
     const [selectedTime, setSelectedTime] = useState(10); // Default is 10 minutes
+    const [travelMode, setTravelMode] = useState<"driving" | "driving-traffic" | "walking" | "cycling" | "public-transport">("driving"); // Default is driving
     const [isModalVisible, setIsModalVisible] = useState(false);
 
     useEffect(() => {
@@ -42,7 +43,17 @@ export default function Index() {
         if (location) {
             const fetchIsochroneData = async () => {
                 try {
-                    const data = await fetchMapboxIsochrone(location.latitude, location.longitude, selectedTime);
+                    let data;
+                    if (travelMode === "public-transport") {
+                        data = await fetchTravelTimeIsochrone(location.latitude, location.longitude, selectedTime);
+                    } else {
+                        data = await fetchMapboxIsochrone(
+                            location.latitude,
+                            location.longitude,
+                            selectedTime,
+                            travelMode
+                        );
+                    }
                     setIsochrone(data);
                 } catch (error) {
                     console.error("Error fetching isochrone data:", error);
@@ -50,7 +61,7 @@ export default function Index() {
             };
             fetchIsochroneData();
         }
-    }, [location, selectedTime]); // Re-fetch isochrone when selectedTime changes
+    }, [location, selectedTime, travelMode]); // Re-fetch when time or mode changes
 
     useEffect(() => {
         if (location && isochrone) {
@@ -102,6 +113,13 @@ export default function Index() {
     ];
 
     const timeOptions = [10, 20, 30]; // Available timestamps
+    const modeOptions = [
+        { label: "Driving", value: "driving" },
+        { label: "Driving (Traffic)", value: "driving-traffic" },
+        { label: "Walking", value: "walking" },
+        { label: "Cycling", value: "cycling" },
+        { label: "Public Transport", value: "public-transport" },
+    ];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -165,6 +183,22 @@ export default function Index() {
                                 >
                                     <Text style={styles.radioOption}>
                                         {selectedTime === item ? "◉" : "○"} {item} minutes
+                                    </Text>
+                                </Pressable>
+                            )}
+                        />
+                        <Text style={styles.modalTitle}>Select Travel Mode</Text>
+                        <FlatList
+                            data={modeOptions}
+                            keyExtractor={(item) => item.label}
+                            renderItem={({ item }) => (
+                                <Pressable
+                                    onPress={() => {
+                                        setTravelMode(item.value as "driving" | "driving-traffic" | "walking" | "cycling" | "public-transport");
+                                    }}
+                                >
+                                    <Text style={styles.radioOption}>
+                                        {travelMode === item.value ? "◉" : "○"} {item.label}
                                     </Text>
                                 </Pressable>
                             )}

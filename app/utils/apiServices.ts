@@ -58,16 +58,61 @@ export const filterPOIsWithinIsochrone = (pois: POI[], isochrone: Isochrone): PO
     });
 };
 
-// Fetch isochrone data from Mapbox with dynamic contours_minutes
+// Fetch isochrone data from Mapbox with dynamic contours_minutes and profile
 export const fetchMapboxIsochrone = async (
     latitude: number,
     longitude: number,
-    contoursMinutes: number
+    contoursMinutes: number,
+    profile: "driving" | "driving-traffic" | "walking" | "cycling"
 ): Promise<Isochrone> => {
     const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
-    const url = `https://api.mapbox.com/isochrone/v1/mapbox/driving/${longitude},${latitude}?contours_minutes=${contoursMinutes}&polygons=true&access_token=${apiKey}`;
+    const url = `https://api.mapbox.com/isochrone/v1/mapbox/${profile}/${longitude},${latitude}?contours_minutes=${contoursMinutes}&polygons=true&access_token=${apiKey}`;
 
     const response = await axios.get(url);
     const coordinates = response.data.features[0].geometry.coordinates[0];
     return { coordinates };
+};
+
+export const fetchTravelTimeIsochrone = async (
+    latitude: number,
+    longitude: number,
+    travelTime: number
+): Promise<Isochrone> => {
+    const appId = process.env.EXPO_PUBLIC_TRAVELTIME_APP_ID;
+    const apiKey = process.env.EXPO_PUBLIC_TRAVELTIME_API_KEY;
+
+    const url = `https://api.traveltimeapp.com/v4/time-map`;
+
+    const body = {
+        departure_searches: [
+            {
+                id: "public_transport_isochrone",
+                coords: { lat: latitude, lng: longitude },
+                transportation: { type: "public_transport" },
+                travel_time: travelTime * 60, // Convert minutes to seconds
+                departure_time: new Date().toISOString(),
+            }
+        ]
+    };
+
+    const headers = {
+        "Content-Type": "application/json",
+        "X-Application-Id": appId,
+        "X-Api-Key": apiKey,
+    };
+
+    try {
+        const response = await axios.post(url, body, { headers });
+        const shell = response.data.results[0].shapes[0].shell;
+
+        // Convert TravelTime shell to GeoJSON format
+        const coordinates = shell.map((point: { lat: number; lng: number }) => [point.lng, point.lat]);
+        // Ensure the polygon is closed by repeating the first point
+        coordinates.push(coordinates[0]);
+
+        return { coordinates };
+    } catch (error) {
+        console.error("Error fetching TravelTime isochrone:", error);
+        throw error;
+    }
 };
