@@ -73,6 +73,7 @@ export const fetchMapboxIsochrone = async (
     return { coordinates };
 };
 
+// TODO: later include departure_searches.transportation.walking_time and departure_searches.transportation.max_changes
 export const fetchTravelTimeIsochrone = async (
     latitude: number,
     longitude: number,

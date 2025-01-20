@@ -7,9 +7,9 @@ import {
     Modal,
     Pressable,
     TouchableOpacity,
-    FlatList,
     SafeAreaView,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
 import GoogleMapsMap from "./GoogleMapsMap";
@@ -112,7 +112,12 @@ export default function Index() {
         { label: "OSM POI", value: "osm" },
     ];
 
-    const timeOptions = [10, 20, 30]; // Available timestamps
+    // Dynamic time options based on the travel mode
+    const timeOptions =
+        travelMode === "public-transport"
+            ? [30, 60, 120, 180] // Public transport: 30min, 1hr, 2hr, 3hr
+            : [10, 15, 30, 60]; // Driving, Walking, Cycling: 10min, 15min, 30min, 1hr
+
     const modeOptions = [
         { label: "Driving", value: "driving" },
         { label: "Driving (Traffic)", value: "driving-traffic" },
@@ -140,69 +145,51 @@ export default function Index() {
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Select Map</Text>
-                        <FlatList
-                            data={menuOptions}
-                            keyExtractor={(item) => item.label}
-                            renderItem={({ item }) => (
-                                <Pressable
-                                    onPress={() => {
-                                        setUseMapBox(item.value);
-                                    }}
-                                >
-                                    <Text style={styles.radioOption}>
-                                        {useMapBox === item.value ? "◉" : "○"} {item.label}
-                                    </Text>
-                                </Pressable>
-                            )}
-                        />
+                        {menuOptions.map((item) => (
+                            <Pressable
+                                key={item.label}
+                                onPress={() => setUseMapBox(item.value)}
+                            >
+                                <Text style={styles.radioOption}>
+                                    {useMapBox === item.value ? "◉" : "○"} {item.label}
+                                </Text>
+                            </Pressable>
+                        ))}
                         <Text style={styles.modalTitle}>Select POI Source</Text>
-                        <FlatList
-                            data={poiOptions}
-                            keyExtractor={(item) => item.label}
-                            renderItem={({ item }) => (
-                                <Pressable
-                                    onPress={() => {
-                                        setDataSource(item.value as "google" | "osm");
-                                    }}
-                                >
-                                    <Text style={styles.radioOption}>
-                                        {dataSource === item.value ? "◉" : "○"} {item.label}
-                                    </Text>
-                                </Pressable>
-                            )}
-                        />
+                        {poiOptions.map((item) => (
+                            <Pressable
+                                key={item.label}
+                                onPress={() => setDataSource(item.value as "google" | "osm")}
+                            >
+                                <Text style={styles.radioOption}>
+                                    {dataSource === item.value ? "◉" : "○"} {item.label}
+                                </Text>
+                            </Pressable>
+                        ))}
                         <Text style={styles.modalTitle}>Select Isochrone Time</Text>
-                        <FlatList
-                            data={timeOptions}
-                            keyExtractor={(item) => item.toString()}
-                            renderItem={({ item }) => (
-                                <Pressable
-                                    onPress={() => {
-                                        setSelectedTime(item);
-                                    }}
-                                >
-                                    <Text style={styles.radioOption}>
-                                        {selectedTime === item ? "◉" : "○"} {item} minutes
-                                    </Text>
-                                </Pressable>
-                            )}
-                        />
+                        <View style={styles.pickerContainer}>
+                            <Picker
+                                selectedValue={selectedTime}
+                                onValueChange={(value) => setSelectedTime(value)}
+                                style={styles.picker}
+                                dropdownIconColor="#007aff"
+                            >
+                                {timeOptions.map((time) => (
+                                    <Picker.Item key={time} label={`${time} min`} value={time} />
+                                ))}
+                            </Picker>
+                        </View>
                         <Text style={styles.modalTitle}>Select Travel Mode</Text>
-                        <FlatList
-                            data={modeOptions}
-                            keyExtractor={(item) => item.label}
-                            renderItem={({ item }) => (
-                                <Pressable
-                                    onPress={() => {
-                                        setTravelMode(item.value as "driving" | "driving-traffic" | "walking" | "cycling" | "public-transport");
-                                    }}
-                                >
-                                    <Text style={styles.radioOption}>
-                                        {travelMode === item.value ? "◉" : "○"} {item.label}
-                                    </Text>
-                                </Pressable>
-                            )}
-                        />
+                        {modeOptions.map((item) => (
+                            <Pressable
+                                key={item.label}
+                                onPress={() => setTravelMode(item.value as typeof travelMode)}
+                            >
+                                <Text style={styles.radioOption}>
+                                    {travelMode === item.value ? "◉" : "○"} {item.label}
+                                </Text>
+                            </Pressable>
+                        ))}
                         <Pressable onPress={() => setIsModalVisible(false)} style={styles.closeButton}>
                             <Text style={styles.closeButtonText}>Close</Text>
                         </Pressable>
@@ -233,6 +220,19 @@ const styles = StyleSheet.create({
     menuButton: {
         color: "white",
         fontSize: 18,
+    },
+    pickerContainer: {
+        width: "100%",
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 5,
+        marginVertical: 10,
+        backgroundColor: "#fff",
+        zIndex: 1000, // Ensure the dropdown appears above other elements
+    },
+    picker: {
+        width: "100%",
+        height: 50,
     },
     modalContainer: {
         flex: 1,
@@ -272,4 +272,3 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
 });
-
