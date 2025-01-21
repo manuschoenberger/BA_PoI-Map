@@ -26,6 +26,30 @@ export default function Index() {
     const [travelMode, setTravelMode] = useState<"driving" | "driving-traffic" | "walking" | "cycling" | "public-transport">("driving"); // Default is driving
     const [isModalVisible, setIsModalVisible] = useState(false);
 
+    // Default time options based on travel mode
+    const timeOptionsMap: Record<
+        typeof travelMode,
+        { times: number[]; defaultTime: number }
+    > = {
+        driving: { times: [10, 15, 30, 60], defaultTime: 10 },
+        "driving-traffic": { times: [10, 15, 30, 60], defaultTime: 10 },
+        walking: { times: [10, 15, 30, 60], defaultTime: 10 },
+        cycling: { times: [10, 15, 30, 60], defaultTime: 10 },
+        "public-transport": { times: [30, 60, 120, 180], defaultTime: 30 },
+    };
+
+    const timeOptions = timeOptionsMap[travelMode].times;
+
+    // Update selected time when travel mode changes
+    useEffect(() => {
+        const { defaultTime } = timeOptionsMap[travelMode];
+
+        // If the current time isn't valid for the new mode, reset to the default time
+        if (!timeOptions.includes(selectedTime)) {
+            setSelectedTime(defaultTime);
+        }
+    }, [travelMode]);
+
     useEffect(() => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -47,21 +71,18 @@ export default function Index() {
                     if (travelMode === "public-transport") {
                         data = await fetchTravelTimeIsochrone(location.latitude, location.longitude, selectedTime);
                     } else {
-                        data = await fetchMapboxIsochrone(
-                            location.latitude,
-                            location.longitude,
-                            selectedTime,
-                            travelMode
-                        );
+                        data = await fetchMapboxIsochrone(location.latitude, location.longitude, selectedTime, travelMode);
                     }
                     setIsochrone(data);
                 } catch (error) {
                     console.error("Error fetching isochrone data:", error);
                 }
             };
-            fetchIsochroneData();
+
+            const debounceFetch = setTimeout(fetchIsochroneData, 300); // Debounce for 300ms
+            return () => clearTimeout(debounceFetch);
         }
-    }, [location, selectedTime, travelMode]); // Re-fetch when time or mode changes
+    }, [location, selectedTime, travelMode]);
 
     useEffect(() => {
         if (location && isochrone) {
@@ -111,12 +132,6 @@ export default function Index() {
         { label: "Google POI", value: "google" },
         { label: "OSM POI", value: "osm" },
     ];
-
-    // Dynamic time options based on the travel mode
-    const timeOptions =
-        travelMode === "public-transport"
-            ? [30, 60, 120, 180] // Public transport: 30min, 1hr, 2hr, 3hr
-            : [10, 15, 30, 60]; // Driving, Walking, Cycling: 10min, 15min, 30min, 1hr
 
     const modeOptions = [
         { label: "Driving", value: "driving" },
@@ -172,7 +187,6 @@ export default function Index() {
                                 selectedValue={selectedTime}
                                 onValueChange={(value) => setSelectedTime(value)}
                                 style={styles.picker}
-                                dropdownIconColor="#007aff"
                             >
                                 {timeOptions.map((time) => (
                                     <Picker.Item key={time} label={`${time} min`} value={time} />
@@ -228,7 +242,6 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginVertical: 10,
         backgroundColor: "#fff",
-        zIndex: 1000, // Ensure the dropdown appears above other elements
     },
     picker: {
         width: "100%",

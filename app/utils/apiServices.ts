@@ -1,5 +1,5 @@
 import axios from "axios";
-import { point, polygon } from "@turf/helpers";
+import { point, polygon, multiPolygon } from "@turf/helpers";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
 // Define a common interface for POI data
@@ -12,7 +12,7 @@ export interface POI {
 
 // Define the structure for Isochrone polygons
 export interface Isochrone {
-    coordinates: [number, number][]; // Array of [longitude, latitude] coordinates
+    coordinates: [number, number][][][]; // Array of MultiPolygon coordinates
 }
 
 // Fetch POIs from Google Maps
@@ -51,10 +51,10 @@ export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise
 
 // Filter POIs within Isochrone
 export const filterPOIsWithinIsochrone = (pois: POI[], isochrone: Isochrone): POI[] => {
-    const isoPolygon = polygon([isochrone.coordinates]);
+    const isoMultiPolygon = multiPolygon(isochrone.coordinates);
     return pois.filter((poi) => {
         const poiPoint = point([poi.longitude, poi.latitude]);
-        return booleanPointInPolygon(poiPoint, isoPolygon);
+        return booleanPointInPolygon(poiPoint, isoMultiPolygon);
     });
 };
 
@@ -69,11 +69,11 @@ export const fetchMapboxIsochrone = async (
     const url = `https://api.mapbox.com/isochrone/v1/mapbox/${profile}/${longitude},${latitude}?contours_minutes=${contoursMinutes}&polygons=true&access_token=${apiKey}`;
 
     const response = await axios.get(url);
-    const coordinates = response.data.features[0].geometry.coordinates[0];
+    const coordinates = response.data.features.map((feature: any) => feature.geometry.coordinates);
     return { coordinates };
 };
 
-// TODO: later include departure_searches.transportation.walking_time and departure_searches.transportation.max_changes
+// Fetch isochrone data from TravelTime API with multiple shells and holes
 export const fetchTravelTimeIsochrone = async (
     latitude: number,
     longitude: number,
@@ -84,6 +84,8 @@ export const fetchTravelTimeIsochrone = async (
 
     const url = `https://api.traveltimeapp.com/v4/time-map`;
 
+    console.log("fetchTravelTimeIsochrone", latitude, longitude, travelTime * 60);
+
     const body = {
         departure_searches: [
             {
@@ -92,8 +94,8 @@ export const fetchTravelTimeIsochrone = async (
                 transportation: { type: "public_transport" },
                 travel_time: travelTime * 60, // Convert minutes to seconds
                 departure_time: new Date().toISOString(),
-            }
-        ]
+            },
+        ],
     };
 
     const headers = {
@@ -104,14 +106,22 @@ export const fetchTravelTimeIsochrone = async (
 
     try {
         const response = await axios.post(url, body, { headers });
-        const shell = response.data.results[0].shapes[0].shell;
 
-        // Convert TravelTime shell to GeoJSON format
-        const coordinates = shell.map((point: { lat: number; lng: number }) => [point.lng, point.lat]);
-        // Ensure the polygon is closed by repeating the first point
-        coordinates.push(coordinates[0]);
+        const shapes = response.data.results[0].shapes;
 
-        return { coordinates };
+        // Convert all shells and holes into GeoJSON-compatible MultiPolygon coordinates
+        const coordinates = shapes.map((shape: any) => {
+            const shell = shape.shell.map((point: { lat: number; lng: number }) => [point.lng, point.lat]);
+
+            // Holes may be empty, ensure holes are formatted correctly
+            const holes = shape.holes.map((hole: { lat: number; lng: number }[]) =>
+                hole.map((point) => [point.lng, point.lat])
+            );
+
+            return [shell, ...holes];
+        });
+
+        return { coordinates }; // MultiPolygon format for Mapbox compatibility
     } catch (error) {
         console.error("Error fetching TravelTime isochrone:", error);
         throw error;

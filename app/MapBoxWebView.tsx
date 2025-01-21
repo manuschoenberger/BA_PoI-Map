@@ -24,20 +24,28 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
         )
         .join("");
 
+    const isochronePolygons = isochrone.coordinates
+        .map(
+            (polygon) => `
+            {
+                type: 'Feature',
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: ${JSON.stringify(polygon)}
+                },
+                properties: {}
+            }
+        `
+        )
+        .join(",");
+
     const isochronePolygon = `
         map.on('load', () => {
             map.addSource('iso', {
                 type: 'geojson',
                 data: {
                     type: 'FeatureCollection',
-                    features: [{
-                        type: 'Feature',
-                        geometry: {
-                            type: 'Polygon',
-                            coordinates: [${JSON.stringify(isochrone.coordinates)}]
-                        },
-                        properties: {}
-                    }]
+                    features: [${isochronePolygons}]
                 }
             });
 

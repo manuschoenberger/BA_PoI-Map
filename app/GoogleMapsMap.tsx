@@ -31,12 +31,18 @@ export default function GoogleMapsMap({ location, pois, isochrone }: MapProps) {
                         title={poi.name}
                     />
                 ))}
-                <Polygon
-                    coordinates={isochrone.coordinates.map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
-                    fillColor="rgba(0, 150, 255, 0.3)"
-                    strokeColor="rgba(0, 150, 255, 0.8)"
-                    strokeWidth={2}
-                />
+                {isochrone.coordinates.map((polygon, index) => (
+                    <Polygon
+                        key={index}
+                        coordinates={polygon[0].map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
+                        holes={polygon.slice(1).map((hole) =>
+                            hole.map(([lng, lat]) => ({ latitude: lat, longitude: lng }))
+                        )}
+                        fillColor="rgba(0, 150, 255, 0.3)"
+                        strokeColor="rgba(0, 150, 255, 0.8)"
+                        strokeWidth={2}
+                    />
+                ))}
             </MapView>
         </View>
     );
