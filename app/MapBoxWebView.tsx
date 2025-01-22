@@ -13,16 +13,17 @@ interface MapBoxWebViewProps {
 }
 
 export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebViewProps) {
-    const poiMarkers = pois
-        .map(
-            (poi) => `
-            new mapboxgl.Marker()
-                .setLngLat([${poi.longitude}, ${poi.latitude}])
-                .setPopup(new mapboxgl.Popup().setText("${poi.name}"))
-                .addTo(map);
-        `
-        )
-        .join("");
+    const poiGeoJSON = {
+        type: "FeatureCollection",
+        features: pois.map((poi) => ({
+            type: "Feature",
+            properties: { title: poi.name },
+            geometry: {
+                type: "Point",
+                coordinates: [poi.longitude, poi.latitude],
+            },
+        })),
+    };
 
     const isochronePolygons = isochrone.coordinates
         .map(
@@ -41,6 +42,7 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
 
     const isochronePolygon = `
         map.on('load', () => {
+            // Add Isochrone polygons
             map.addSource('iso', {
                 type: 'geojson',
                 data: {
@@ -60,28 +62,65 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
                 }
             });
 
-            // Add blue dot for current location
-            map.addSource('currentLocation', {
+            // Add POI Clustering
+            map.addSource('pois', {
                 type: 'geojson',
-                data: {
-                    type: 'Feature',
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [${location.longitude}, ${location.latitude}]
-                    }
-                }
+                data: ${JSON.stringify(poiGeoJSON)},
+                cluster: true,
+                clusterMaxZoom: 14, // Max zoom level for clusters
+                clusterRadius: 50, // Radius of each cluster in pixels
             });
 
+            // Add cluster layer
             map.addLayer({
-                id: 'currentLocationLayer',
+                id: 'clusters',
                 type: 'circle',
-                source: 'currentLocation',
+                source: 'pois',
+                filter: ['has', 'point_count'],
                 paint: {
-                    'circle-radius': 8,
-                    'circle-color': '#0000ff',
+                    'circle-color': '#51bbd6',
+                    'circle-radius': 20,
                     'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff'
-                }
+                    'circle-stroke-color': '#ffffff',
+                },
+            });
+
+            // Add cluster count labels
+            map.addLayer({
+                id: 'cluster-count',
+                type: 'symbol',
+                source: 'pois',
+                filter: ['has', 'point_count'],
+                layout: {
+                    'text-field': '{point_count_abbreviated}',
+                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                    'text-size': 12,
+                },
+            });
+
+            // Add individual POIs
+            map.addLayer({
+                id: 'unclustered-point',
+                type: 'circle',
+                source: 'pois',
+                filter: ['!', ['has', 'point_count']],
+                paint: {
+                    'circle-color': '#11b4da',
+                    'circle-radius': 6,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#fff',
+                },
+            });
+
+            map.on('click', 'unclustered-point', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const { title } = e.features[0].properties;
+
+                // Show a popup on click
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(\`<strong>\${title}</strong>\`)
+                    .addTo(map);
             });
         });
     `;
@@ -110,10 +149,7 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
                 zoom: 12
             });
 
-            // Add POI markers
-            ${poiMarkers}
-
-            // Add Isochrone Polygon
+            // Add Isochrone Polygon and Clusters
             ${isochronePolygon}
         </script>
     </body>

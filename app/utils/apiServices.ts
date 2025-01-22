@@ -33,20 +33,36 @@ export const fetchGooglePOIs = async (latitude: number, longitude: number): Prom
 
 // Fetch POIs from OpenStreetMap
 export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
-    const radius = 15000; // Approximate degree radius (~15 km)
-    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity](around:${radius},${latitude},${longitude});out;`;
+    const radius = 70000; // Approximate radius of 50 km
+    // Filter for specific amenities to reduce the number of results
 
-    const response = await axios.get(url);
+    // const amenityFilters = ["restaurant","cafe","park","museum","hotel","tourist_attraction",].join("|");
+    const amenityFilters = [
+        "park",
+        "museum",
+        "hotel",
+        "tourist_attraction",
+    ].join("|");
 
-    // Filter out unnamed POIs
-    return response.data.elements
-        .filter((element: any) => element.tags.name)
-        .map((element: any) => ({
-            id: element.id,
-            name: element.tags.name,
-            latitude: element.lat,
-            longitude: element.lon,
-        }));
+    // Construct the Overpass API query with filtering by amenities
+    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity~"${amenityFilters}"](around:${radius},${latitude},${longitude});out;`;
+
+    try {
+        const response = await axios.get(url);
+
+        // Filter and map the response
+        return response.data.elements
+            .filter((element: any) => element.tags.name) // Include only named POIs
+            .map((element: any) => ({
+                id: element.id,
+                name: element.tags.name,
+                latitude: element.lat,
+                longitude: element.lon,
+            }));
+    } catch (error) {
+        console.error("Error fetching OSM POIs:", error);
+        throw error;
+    }
 };
 
 // Filter POIs within Isochrone

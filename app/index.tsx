@@ -92,7 +92,7 @@ export default function Index() {
                     if (dataSource === "google") {
                         data = await fetchGooglePOIs(location.latitude, location.longitude);
                     } else {
-                        data = await fetchOSMPOIs(location.latitude, location.longitude);
+                        data = await fetchOSMPOIs(location.latitude, location.longitude, 50000, ["restaurant", "cafe", "park"]);
                     }
 
                     // Filter POIs within the isochrone
