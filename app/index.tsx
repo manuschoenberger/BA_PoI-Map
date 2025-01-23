@@ -92,7 +92,7 @@ export default function Index() {
                     if (dataSource === "google") {
                         data = await fetchGooglePOIs(location.latitude, location.longitude);
                     } else {
-                        data = await fetchOSMPOIs(location.latitude, location.longitude, 50000, ["restaurant", "cafe", "park"]);
+                        data = await fetchOSMPOIs(location.latitude, location.longitude);
                     }
 
                     // Filter POIs within the isochrone
@@ -140,6 +140,8 @@ export default function Index() {
         { label: "Cycling", value: "cycling" },
         { label: "Public Transport", value: "public-transport" },
     ];
+
+    const maxRadius = dataSource === "google" ? 50000 : 70000;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -213,9 +215,9 @@ export default function Index() {
 
             {/* Map Display */}
             {useMapBox ? (
-                location && isochrone && <MapBoxWebView location={location} pois={pois} isochrone={isochrone} />
+                location && isochrone && <MapBoxWebView location={location} pois={pois} isochrone={isochrone} maxRadius={maxRadius} />
             ) : (
-                location && isochrone && <GoogleMapsMap location={location} pois={pois} isochrone={isochrone} />
+                location && isochrone && <GoogleMapsMap location={location} pois={pois} isochrone={isochrone} maxRadius={maxRadius} />
             )}
         </SafeAreaView>
     );

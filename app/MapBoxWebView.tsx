@@ -10,9 +10,10 @@ interface MapBoxWebViewProps {
     location: LocationObjectCoords;
     pois: POI[];
     isochrone: Isochrone;
+    maxRadius: number;
 }
 
-export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebViewProps) {
+export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: MapBoxWebViewProps) {
     const poiGeoJSON = {
         type: "FeatureCollection",
         features: pois.map((poi) => ({
@@ -26,6 +27,29 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
     };
 
     const isochronePolygons = isochrone.coordinates
+        .map(
+            (polygon) => `
+            {
+                type: 'Feature',
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: ${JSON.stringify(polygon)}
+                },
+                properties: {}
+            }
+        `
+        )
+        .join(",");
+
+    const outOfBoundsPolygons = isochrone.coordinates
+        .map((polygon) => {
+            const outOfBounds = polygon[0].filter(([lng, lat]) => {
+                const distance = getDistanceFromLatLonInKm(location.latitude, location.longitude, lat, lng);
+                return distance > maxRadius / 1000; // Convert radius to km
+            });
+            return outOfBounds.length > 0 ? [outOfBounds] : null;
+        })
+        .filter(Boolean)
         .map(
             (polygon) => `
             {
@@ -58,6 +82,26 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
                 layout: {},
                 paint: {
                     'fill-color': '#007cbf',
+                    'fill-opacity': 0.3
+                }
+            });
+
+            // Add out-of-bounds polygons
+            map.addSource('outOfBounds', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: [${outOfBoundsPolygons}]
+                }
+            });
+
+            map.addLayer({
+                id: 'outOfBoundsLayer',
+                type: 'fill',
+                source: 'outOfBounds',
+                layout: {},
+                paint: {
+                    'fill-color': '#ff0000',
                     'fill-opacity': 0.3
                 }
             });
@@ -161,6 +205,24 @@ export default function MapBoxWebView({ location, pois, isochrone }: MapBoxWebVi
             <WebView originWhitelist={["*"]} source={{ html }} style={styles.map} />
         </View>
     );
+}
+
+// Helper function to calculate distance between two coordinates in km
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in km
+    return distance;
+}
+
+function deg2rad(deg: number) {
+    return deg * (Math.PI / 180);
 }
 
 const styles = StyleSheet.create({

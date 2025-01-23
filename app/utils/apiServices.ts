@@ -16,19 +16,45 @@ export interface Isochrone {
 }
 
 // Fetch POIs from Google Maps
+const touristTypes = [
+    "tourist_attraction",
+    "museum",
+    "park",
+    "restaurant",
+    "cafe",
+    "shopping_mall",
+    "zoo",
+    "amusement_park",
+    "aquarium",
+    "art_gallery",
+    "night_club",
+    "casino",
+];
+
 export const fetchGooglePOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
     const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
     const radius = 49999; // Fetch within 50 km
-    const type = "tourist_attraction";
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${apiKey}`;
 
-    const response = await axios.get(url);
-    return response.data.results.map((result: any) => ({
-        id: result.place_id,
-        name: result.name,
-        latitude: result.geometry.location.lat,
-        longitude: result.geometry.location.lng,
-    }));
+    const requests = touristTypes.map((type) => {
+        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${apiKey}`;
+        return axios.get(url);
+    });
+
+    const responses = await Promise.all(requests);
+
+    const pois = responses.flatMap((response) =>
+        response.data.results.map((result: any) => ({
+            id: result.place_id,
+            name: result.name,
+            latitude: result.geometry.location.lat,
+            longitude: result.geometry.location.lng,
+        }))
+    );
+
+    // Remove duplicate POIs by ID
+    const uniquePOIs = Array.from(new Map(pois.map((poi) => [poi.id, poi])).values());
+
+    return uniquePOIs;
 };
 
 // Fetch POIs from OpenStreetMap
@@ -99,8 +125,6 @@ export const fetchTravelTimeIsochrone = async (
     const apiKey = process.env.EXPO_PUBLIC_TRAVELTIME_API_KEY;
 
     const url = `https://api.traveltimeapp.com/v4/time-map`;
-
-    console.log("fetchTravelTimeIsochrone", latitude, longitude, travelTime * 60);
 
     const body = {
         departure_searches: [
