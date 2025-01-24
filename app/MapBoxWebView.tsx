@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
+import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
 
 const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
 
@@ -12,6 +13,43 @@ interface MapBoxWebViewProps {
     isochrone: Isochrone;
     maxRadius: number;
 }
+
+// Function to create a GeoJSON polygon for the maxRadius circle
+const createGeoJSONCircle = (center: [number, number], radiusInKm: number, points = 64) => {
+    const coords = {
+        latitude: center[1],
+        longitude: center[0],
+    };
+
+    const km = radiusInKm;
+    const ret = [];
+    const distanceX = km / (111.320 * Math.cos((coords.latitude * Math.PI) / 180)); // Longitudinal distance
+    const distanceY = km / 110.574; // Latitudinal distance
+
+    for (let i = 0; i < points; i++) {
+        const theta = (i / points) * (2 * Math.PI); // Angle for each point
+        const x = distanceX * Math.cos(theta);
+        const y = distanceY * Math.sin(theta);
+
+        ret.push([coords.longitude + x, coords.latitude + y]);
+    }
+
+    // Close the polygon by repeating the first point
+    ret.push(ret[0]);
+
+    return {
+        type: "FeatureCollection",
+        features: [
+            {
+                type: "Feature",
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [ret],
+                },
+            },
+        ],
+    };
+};
 
 export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: MapBoxWebViewProps) {
     const poiGeoJSON = {
@@ -26,43 +64,16 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
         })),
     };
 
-    const isochronePolygons = isochrone.coordinates
-        .map(
-            (polygon) => `
-            {
-                type: 'Feature',
-                geometry: {
-                    type: 'Polygon',
-                    coordinates: ${JSON.stringify(polygon)}
-                },
-                properties: {}
-            }
-        `
-        )
-        .join(",");
+    const maxRadiusGeoJSON = createGeoJSONCircle([location.longitude, location.latitude], maxRadius / 1000);
 
-    const outOfBoundsPolygons = isochrone.coordinates
-        .map((polygon) => {
-            const outOfBounds = polygon[0].filter(([lng, lat]) => {
-                const distance = getDistanceFromLatLonInKm(location.latitude, location.longitude, lat, lng);
-                return distance > maxRadius / 1000; // Convert radius to km
-            });
-            return outOfBounds.length > 0 ? [outOfBounds] : null;
-        })
-        .filter(Boolean)
-        .map(
-            (polygon) => `
-            {
-                type: 'Feature',
-                geometry: {
-                    type: 'Polygon',
-                    coordinates: ${JSON.stringify(polygon)}
-                },
-                properties: {}
-            }
-        `
-        )
-        .join(",");
+    const isochronePolygons = isochrone.coordinates.map((polygon) => ({
+        type: "Feature",
+        geometry: {
+            type: "Polygon",
+            coordinates: polygon,
+        },
+        properties: {},
+    }));
 
     const isochronePolygon = `
         map.on('load', () => {
@@ -71,7 +82,7 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
                 type: 'geojson',
                 data: {
                     type: 'FeatureCollection',
-                    features: [${isochronePolygons}]
+                    features: ${JSON.stringify(isochronePolygons)},
                 }
             });
 
@@ -86,23 +97,44 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
                 }
             });
 
-            // Add out-of-bounds polygons
-            map.addSource('outOfBounds', {
+            // Add max radius as a circle outline
+            map.addSource('maxRadius', {
+                type: 'geojson',
+                data: ${JSON.stringify(maxRadiusGeoJSON)},
+            });
+
+            map.addLayer({
+                id: 'maxRadiusLayer',
+                type: 'line',
+                source: 'maxRadius',
+                layout: {},
+                paint: {
+                    'line-color': 'rgba(255, 0, 0, 0.8)',
+                    'line-width': 2,
+                },
+            });
+
+            // Add user location as a dot
+            map.addSource('userLocation', {
                 type: 'geojson',
                 data: {
-                    type: 'FeatureCollection',
-                    features: [${outOfBoundsPolygons}]
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [${location.longitude}, ${location.latitude}],
+                    },
                 }
             });
 
             map.addLayer({
-                id: 'outOfBoundsLayer',
-                type: 'fill',
-                source: 'outOfBounds',
-                layout: {},
+                id: 'userLocationLayer',
+                type: 'circle',
+                source: 'userLocation',
                 paint: {
-                    'fill-color': '#ff0000',
-                    'fill-opacity': 0.3
+                    'circle-radius': 6,
+                    'circle-color': '#0000ff',
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff',
                 }
             });
 
@@ -111,11 +143,10 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
                 type: 'geojson',
                 data: ${JSON.stringify(poiGeoJSON)},
                 cluster: true,
-                clusterMaxZoom: 14, // Max zoom level for clusters
-                clusterRadius: 50, // Radius of each cluster in pixels
+                clusterMaxZoom: 14,
+                clusterRadius: 50,
             });
 
-            // Add cluster layer
             map.addLayer({
                 id: 'clusters',
                 type: 'circle',
@@ -129,7 +160,6 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
                 },
             });
 
-            // Add cluster count labels
             map.addLayer({
                 id: 'cluster-count',
                 type: 'symbol',
@@ -142,7 +172,6 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
                 },
             });
 
-            // Add individual POIs
             map.addLayer({
                 id: 'unclustered-point',
                 type: 'circle',
@@ -205,24 +234,6 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
             <WebView originWhitelist={["*"]} source={{ html }} style={styles.map} />
         </View>
     );
-}
-
-// Helper function to calculate distance between two coordinates in km
-function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in km
-    return distance;
-}
-
-function deg2rad(deg: number) {
-    return deg * (Math.PI / 180);
 }
 
 const styles = StyleSheet.create({

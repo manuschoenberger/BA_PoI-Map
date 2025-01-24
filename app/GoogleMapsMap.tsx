@@ -1,8 +1,9 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, { Polygon, Marker } from "react-native-maps";
+import MapView, { Polygon, Marker, Circle, Polyline } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
+import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
 
 interface MapProps {
     location: LocationObjectCoords;
@@ -12,15 +13,46 @@ interface MapProps {
 }
 
 export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: MapProps) {
-    // Calculate the out-of-bounds area
-    const outOfBoundsPolygons = isochrone.coordinates.map((polygon) => {
-        if (!polygon || !Array.isArray(polygon[0])) return null;
-        const outOfBounds = polygon[0].filter(([lng, lat]) => {
-            const distance = getDistanceFromLatLonInKm(location.latitude, location.longitude, lat, lng);
-            return distance > maxRadius / 1000; // Convert radius to km
-        });
-        return outOfBounds.length > 0 ? [outOfBounds] : null;
-    }).filter(Boolean);
+    // Process polygons to separate in-bounds and out-of-bounds segments
+    const { inBoundsSegments, outOfBoundsSegments } = isochrone.coordinates.reduce(
+        (acc, polygon) => {
+            let currentSegment: { latitude: number, longitude: number }[] = [];
+            let isOutOfBounds = false;
+
+            polygon[0].forEach(([lng, lat], index) => {
+                const distance = getDistanceFromLatLonInKm(location.latitude, location.longitude, lat, lng);
+                const point = { latitude: lat, longitude: lng };
+                const outOfBounds = distance > maxRadius / 1000; // Convert maxRadius to km
+
+                if (outOfBounds !== isOutOfBounds) {
+                    if (currentSegment.length > 0) {
+                        currentSegment.push(point);
+                        if (isOutOfBounds) {
+                            acc.outOfBoundsSegments.push(currentSegment);
+                        } else {
+                            acc.inBoundsSegments.push(currentSegment);
+                        }
+                        currentSegment = [point];
+                    }
+                    isOutOfBounds = outOfBounds;
+                } else {
+                    currentSegment.push(point);
+                }
+
+                // Handle the last point
+                if (index === polygon[0].length - 1 && currentSegment.length > 0) {
+                    if (isOutOfBounds) {
+                        acc.outOfBoundsSegments.push(currentSegment);
+                    } else {
+                        acc.inBoundsSegments.push(currentSegment);
+                    }
+                }
+            });
+
+            return acc;
+        },
+        { inBoundsSegments: [], outOfBoundsSegments: [] }
+    );
 
     return (
         <View style={styles.container}>
@@ -35,6 +67,7 @@ export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: 
                 showsUserLocation={true}
                 userLocationUpdateInterval={30000}
             >
+                {/* Display POI markers */}
                 {pois.map((poi) => (
                     <Marker
                         key={poi.id}
@@ -42,9 +75,40 @@ export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: 
                         title={poi.name}
                     />
                 ))}
+
+                {/* Display Isochrone in-bounds segments */}
+                {inBoundsSegments.map((segment, index) => (
+                    <Polyline
+                        key={`inBounds-${index}`}
+                        coordinates={segment}
+                        strokeColor="rgba(0, 150, 255, 0.8)"
+                        strokeWidth={2}
+                    />
+                ))}
+
+                {/* Display Isochrone out-of-bounds segments */}
+                {outOfBoundsSegments.map((segment, index) => (
+                    <Polyline
+                        key={`outOfBounds-${index}`}
+                        coordinates={segment}
+                        strokeColor="rgba(255, 0, 0, 0.8)"
+                        strokeWidth={2}
+                    />
+                ))}
+
+                {/* Draw the maxRadius circle */}
+                <Circle
+                    center={{ latitude: location.latitude, longitude: location.longitude }}
+                    radius={maxRadius} // In meters
+                    strokeColor="rgba(255, 0, 0, 0.5)"
+                    fillColor="transparent"
+                    strokeWidth={2}
+                />
+
+                {/* Display Isochrone polygons */}
                 {isochrone.coordinates.map((polygon, index) => (
                     <Polygon
-                        key={index}
+                        key={`isochrone-${index}`}
                         coordinates={polygon[0].map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
                         holes={polygon.slice(1).map((hole) =>
                             hole.map(([lng, lat]) => ({ latitude: lat, longitude: lng }))
@@ -54,36 +118,9 @@ export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: 
                         strokeWidth={2}
                     />
                 ))}
-                {outOfBoundsPolygons.map((polygon, index) => (
-                    <Polygon
-                        key={`outOfBounds-${index}`}
-                        coordinates={polygon[0].map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
-                        fillColor="rgba(255, 0, 0, 0.3)"
-                        strokeColor="rgba(255, 0, 0, 0.8)"
-                        strokeWidth={2}
-                    />
-                ))}
             </MapView>
         </View>
     );
-}
-
-// Helper function to calculate distance between two coordinates in km
-function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in km
-    return distance;
-}
-
-function deg2rad(deg: number) {
-    return deg * (Math.PI / 180);
 }
 
 const styles = StyleSheet.create({
