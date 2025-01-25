@@ -12,6 +12,10 @@ interface MapBoxWebViewProps {
     pois: POI[];
     isochrone: Isochrone;
     maxRadius: number;
+    travelMode: "driving" | "driving-traffic" | "walking" | "cycling" | "public_transport";
+    selectedPOI: POI | null;
+    setSelectedPOI: (poi: POI | null) => void;
+    routeGeoJSON: any;
 }
 
 // Function to create a GeoJSON polygon for the maxRadius circle
@@ -51,12 +55,21 @@ const createGeoJSONCircle = (center: [number, number], radiusInKm: number, point
     };
 };
 
-export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: MapBoxWebViewProps) {
+export default function MapBoxWebView({
+                                          location,
+                                          pois,
+                                          isochrone,
+                                          maxRadius,
+                                          travelMode,
+                                          selectedPOI,
+                                          setSelectedPOI,
+                                          routeGeoJSON,
+                                      }: MapBoxWebViewProps) {
     const poiGeoJSON = {
         type: "FeatureCollection",
         features: pois.map((poi) => ({
             type: "Feature",
-            properties: { title: poi.name },
+            properties: { title: poi.name, id: poi.id },
             geometry: {
                 type: "Point",
                 coordinates: [poi.longitude, poi.latitude],
@@ -185,9 +198,15 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
                 },
             });
 
+            // Handle POI click
             map.on('click', 'unclustered-point', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
-                const { title } = e.features[0].properties;
+                const { title, id } = e.features[0].properties;
+
+                // Notify parent about the selected POI
+                window.ReactNativeWebView.postMessage(
+                    JSON.stringify({ type: 'SELECT_POI', data: { id, title, coordinates } })
+                );
 
                 // Show a popup on click
                 new mapboxgl.Popup()
@@ -195,6 +214,27 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
                     .setHTML(\`<strong>\${title}</strong>\`)
                     .addTo(map);
             });
+
+            // Add route if available
+            ${routeGeoJSON
+        ? `
+                map.addSource('route', {
+                    type: 'geojson',
+                    data: ${JSON.stringify(routeGeoJSON)},
+                });
+
+                map.addLayer({
+                    id: 'routeLayer',
+                    type: 'line',
+                    source: 'route',
+                    layout: {},
+                    paint: {
+                        'line-color': '#ff00ff',
+                        'line-width': 4,
+                    },
+                });
+            `
+        : ''}
         });
     `;
 
@@ -231,7 +271,18 @@ export default function MapBoxWebView({ location, pois, isochrone, maxRadius }: 
 
     return (
         <View style={styles.container}>
-            <WebView originWhitelist={["*"]} source={{ html }} style={styles.map} />
+            <WebView
+                originWhitelist={["*"]}
+                source={{ html }}
+                style={styles.map}
+                onMessage={(event) => {
+                    const message = JSON.parse(event.nativeEvent.data);
+                    if (message.type === "SELECT_POI") {
+                        const { id, title, coordinates } = message.data;
+                        setSelectedPOI({ id, name: title, latitude: coordinates[1], longitude: coordinates[0] });
+                    }
+                }}
+            />
         </View>
     );
 }

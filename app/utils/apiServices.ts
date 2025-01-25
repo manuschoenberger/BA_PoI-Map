@@ -167,3 +167,14 @@ export const fetchTravelTimeIsochrone = async (
         throw error;
     }
 };
+
+export const fetchMapboxRoute = async (
+    start: [number, number],
+    end: [number, number],
+    profile: "driving" | "driving-traffic" | "walking" | "cycling"
+): Promise<any> => {
+    const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${apiKey}`;
+    const response = await axios.get(url);
+    return response.data.routes[0].geometry;
+};

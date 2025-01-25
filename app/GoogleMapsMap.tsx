@@ -10,13 +10,27 @@ interface MapProps {
     pois: POI[];
     isochrone: Isochrone;
     maxRadius: number;
+    selectedPOI: POI | null;
+    setSelectedPOI: (poi: POI | null) => void;
+    routeCoordinates: { latitude: number; longitude: number }[] | null;
 }
 
-export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: MapProps) {
+export default function GoogleMapsMap({
+                                          location,
+                                          pois,
+                                          isochrone,
+                                          maxRadius,
+                                          selectedPOI,
+                                          setSelectedPOI,
+                                          routeCoordinates,
+                                      }: MapProps) {
     // Process polygons to separate in-bounds and out-of-bounds segments
     const { inBoundsSegments, outOfBoundsSegments } = isochrone.coordinates.reduce(
-        (acc, polygon) => {
-            let currentSegment: { latitude: number, longitude: number }[] = [];
+        (
+            acc: { inBoundsSegments: { latitude: number; longitude: number }[][]; outOfBoundsSegments: { latitude: number; longitude: number }[][] },
+            polygon
+        ) => {
+            let currentSegment: { latitude: number; longitude: number }[] = [];
             let isOutOfBounds = false;
 
             polygon[0].forEach(([lng, lat], index) => {
@@ -66,6 +80,7 @@ export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: 
                 }}
                 showsUserLocation={true}
                 userLocationUpdateInterval={30000}
+                onPress={() => setSelectedPOI(null)} // Deselect POI when clicking outside
             >
                 {/* Display POI markers */}
                 {pois.map((poi) => (
@@ -73,6 +88,7 @@ export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: 
                         key={poi.id}
                         coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
                         title={poi.name}
+                        onPress={() => setSelectedPOI(poi)} // Notify parent on POI click
                     />
                 ))}
 
@@ -118,6 +134,15 @@ export default function GoogleMapsMap({ location, pois, isochrone, maxRadius }: 
                         strokeWidth={2}
                     />
                 ))}
+
+                {/* Display route */}
+                {routeCoordinates && (
+                    <Polyline
+                        coordinates={routeCoordinates}
+                        strokeColor="rgba(255, 0, 255, 0.8)" // Purple for the route
+                        strokeWidth={4}
+                    />
+                )}
             </MapView>
         </View>
     );

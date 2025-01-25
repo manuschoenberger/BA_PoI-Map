@@ -8,12 +8,22 @@ import {
     Pressable,
     TouchableOpacity,
     SafeAreaView,
+    Button,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
 import GoogleMapsMap from "./GoogleMapsMap";
-import { POI, fetchGooglePOIs, fetchOSMPOIs, fetchMapboxIsochrone, filterPOIsWithinIsochrone, fetchTravelTimeIsochrone } from "./utils/apiServices";
+import {
+    POI,
+    fetchGooglePOIs,
+    fetchOSMPOIs,
+    fetchMapboxIsochrone,
+    filterPOIsWithinIsochrone,
+    fetchTravelTimeIsochrone,
+    Isochrone,
+    fetchMapboxRoute,
+} from "./utils/apiServices";
 
 export default function Index() {
     const [useMapBox, setUseMapBox] = useState(true);
@@ -21,10 +31,12 @@ export default function Index() {
     const [errorMsg, setErrorMsg] = useState("");
     const [pois, setPois] = useState<POI[]>([]);
     const [dataSource, setDataSource] = useState<"google" | "osm">("google");
-    const [isochrone, setIsochrone] = useState<{ coordinates: [number, number][] } | null>(null);
+    const [isochrone, setIsochrone] = useState<Isochrone | null>(null);
     const [selectedTime, setSelectedTime] = useState(10); // Default is 10 minutes
     const [travelMode, setTravelMode] = useState<"driving" | "driving-traffic" | "walking" | "cycling" | "public-transport">("driving"); // Default is driving
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [selectedPOI, setSelectedPOI] = useState<POI | null>(null); // Selected POI for routing
+    const [routeGeoJSON, setRouteGeoJSON] = useState(null); // Route GeoJSON
 
     // Default time options based on travel mode
     const timeOptionsMap: Record<
@@ -67,7 +79,7 @@ export default function Index() {
         if (location) {
             const fetchIsochroneData = async () => {
                 try {
-                    let data;
+                    let data: Isochrone;
                     if (travelMode === "public-transport") {
                         data = await fetchTravelTimeIsochrone(location.latitude, location.longitude, selectedTime);
                     } else {
@@ -141,7 +153,44 @@ export default function Index() {
         { label: "Public Transport", value: "public-transport" },
     ];
 
+    const handleFetchRoute = async () => {
+        if (!selectedPOI || !location) return;
+
+        const start: [number, number] = [location.longitude, location.latitude];
+        const end = [selectedPOI.longitude, selectedPOI.latitude];
+
+        try {
+            const route = await fetchMapboxRoute(start, end, travelMode);
+            setRouteGeoJSON(route); // Set the fetched route
+        } catch (error) {
+            console.error("Error fetching route:", error);
+        }
+    };
+
+    // Add a function to clear the route and deselect the PoI
+    const handleClearRoute = () => {
+        setRouteGeoJSON(null);
+        setSelectedPOI(null);
+    };
+
     const maxRadius = dataSource === "google" ? 50000 : 70000;
+
+    if (!location && !errorMsg) {
+        return (
+            <View style={styles.loader}>
+                <ActivityIndicator size="large" color="#0000ff" />
+                <Text>Fetching location...</Text>
+            </View>
+        );
+    }
+
+    if (errorMsg) {
+        return (
+            <View style={styles.loader}>
+                <Text style={{ color: "red" }}>{errorMsg}</Text>
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -215,9 +264,41 @@ export default function Index() {
 
             {/* Map Display */}
             {useMapBox ? (
-                location && isochrone && <MapBoxWebView location={location} pois={pois} isochrone={isochrone} maxRadius={maxRadius} />
+                location && isochrone && (
+                    <MapBoxWebView
+                        location={location}
+                        pois={pois}
+                        isochrone={isochrone}
+                        maxRadius={maxRadius}
+                        travelMode={travelMode}
+                        selectedPOI={selectedPOI}
+                        setSelectedPOI={setSelectedPOI}
+                        routeGeoJSON={routeGeoJSON}
+                    />
+                )
             ) : (
-                location && isochrone && <GoogleMapsMap location={location} pois={pois} isochrone={isochrone} maxRadius={maxRadius} />
+                location && isochrone && (
+                    <GoogleMapsMap
+                        location={location}
+                        pois={pois}
+                        isochrone={isochrone}
+                        maxRadius={maxRadius}
+                        selectedPOI={selectedPOI}
+                        setSelectedPOI={setSelectedPOI}
+                        routeCoordinates={routeGeoJSON ? routeGeoJSON.coordinates.map(([lng, lat]) => ({ latitude: lat, longitude: lng })) : null}
+                    />
+                )
+            )}
+
+            {/* Directions Button */}
+            {selectedPOI && (
+                <View style={styles.buttonContainer}>
+                    {routeGeoJSON ? (
+                        <Button title="Clear Route" onPress={handleClearRoute} />
+                    ) : (
+                        <Button title="Directions" onPress={handleFetchRoute} />
+                    )}
+                </View>
             )}
         </SafeAreaView>
     );
@@ -280,6 +361,12 @@ const styles = StyleSheet.create({
     closeButtonText: {
         color: "white",
         fontSize: 16,
+    },
+    buttonContainer: {
+        position: "absolute",
+        bottom: 10,
+        left: 10,
+        right: 10,
     },
     loader: {
         flex: 1,
