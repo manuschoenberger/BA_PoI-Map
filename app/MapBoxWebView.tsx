@@ -3,7 +3,8 @@ import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
-import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
+import bbox from "@turf/bbox";
+import { multiPolygon } from "@turf/helpers";
 
 const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
 
@@ -55,6 +56,12 @@ const createGeoJSONCircle = (center: [number, number], radiusInKm: number, point
     };
 };
 
+// Function to calculate the bounding box of the isochrone
+const calculateIsochroneBounds = (isochrone: Isochrone) => {
+    const isoMultiPolygon = multiPolygon(isochrone.coordinates);
+    return bbox(isoMultiPolygon);
+};
+
 export default function MapBoxWebView({
                                           location,
                                           pois,
@@ -88,155 +95,160 @@ export default function MapBoxWebView({
         properties: {},
     }));
 
+    const isochroneBounds = calculateIsochroneBounds(isochrone);
+
     const isochronePolygon = `
-        map.on('load', () => {
-            // Add Isochrone polygons
-            map.addSource('iso', {
-                type: 'geojson',
-                data: {
-                    type: 'FeatureCollection',
-                    features: ${JSON.stringify(isochronePolygons)},
-                }
-            });
-
-            map.addLayer({
-                id: 'isoLayer',
-                type: 'fill',
-                source: 'iso',
-                layout: {},
-                paint: {
-                    'fill-color': '#007cbf',
-                    'fill-opacity': 0.3
-                }
-            });
-
-            // Add max radius as a circle outline
-            map.addSource('maxRadius', {
-                type: 'geojson',
-                data: ${JSON.stringify(maxRadiusGeoJSON)},
-            });
-
-            map.addLayer({
-                id: 'maxRadiusLayer',
-                type: 'line',
-                source: 'maxRadius',
-                layout: {},
-                paint: {
-                    'line-color': 'rgba(255, 0, 0, 0.8)',
-                    'line-width': 2,
-                },
-            });
-
-            // Add user location as a dot
-            map.addSource('userLocation', {
-                type: 'geojson',
-                data: {
-                    type: 'Feature',
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [${location.longitude}, ${location.latitude}],
-                    },
-                }
-            });
-
-            map.addLayer({
-                id: 'userLocationLayer',
-                type: 'circle',
-                source: 'userLocation',
-                paint: {
-                    'circle-radius': 6,
-                    'circle-color': '#0000ff',
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff',
-                }
-            });
-
-            // Add POI Clustering
-            map.addSource('pois', {
-                type: 'geojson',
-                data: ${JSON.stringify(poiGeoJSON)},
-                cluster: true,
-                clusterMaxZoom: 14,
-                clusterRadius: 50,
-            });
-
-            map.addLayer({
-                id: 'clusters',
-                type: 'circle',
-                source: 'pois',
-                filter: ['has', 'point_count'],
-                paint: {
-                    'circle-color': '#51bbd6',
-                    'circle-radius': 20,
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff',
-                },
-            });
-
-            map.addLayer({
-                id: 'cluster-count',
-                type: 'symbol',
-                source: 'pois',
-                filter: ['has', 'point_count'],
-                layout: {
-                    'text-field': '{point_count_abbreviated}',
-                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                    'text-size': 12,
-                },
-            });
-
-            map.addLayer({
-                id: 'unclustered-point',
-                type: 'circle',
-                source: 'pois',
-                filter: ['!', ['has', 'point_count']],
-                paint: {
-                    'circle-color': '#11b4da',
-                    'circle-radius': 6,
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#fff',
-                },
-            });
-
-            // Handle POI click
-            map.on('click', 'unclustered-point', (e) => {
-                const coordinates = e.features[0].geometry.coordinates.slice();
-                const { title, id } = e.features[0].properties;
-
-                // Notify parent about the selected POI
-                window.ReactNativeWebView.postMessage(
-                    JSON.stringify({ type: 'SELECT_POI', data: { id, title, coordinates } })
-                );
-
-                // Show a popup on click
-                new mapboxgl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML(\`<strong>\${title}</strong>\`)
-                    .addTo(map);
-            });
-
-            // Add route if available
-            ${routeGeoJSON
-        ? `
-                map.addSource('route', {
-                    type: 'geojson',
-                    data: ${JSON.stringify(routeGeoJSON)},
-                });
-
-                map.addLayer({
-                    id: 'routeLayer',
-                    type: 'line',
-                    source: 'route',
-                    layout: {},
-                    paint: {
-                        'line-color': '#ff00ff',
-                        'line-width': 4,
-                    },
-                });
-            `
-        : ''}
+    map.on('load', () => {
+        // Add Isochrone polygons
+        map.addSource('iso', {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: ${JSON.stringify(isochronePolygons)},
+            }
         });
-    `;
+
+        map.addLayer({
+            id: 'isoLayer',
+            type: 'fill',
+            source: 'iso',
+            layout: {},
+            paint: {
+                'fill-color': '#007cbf',
+                'fill-opacity': 0.3
+            }
+        });
+
+        // Add max radius as a circle outline
+        map.addSource('maxRadius', {
+            type: 'geojson',
+            data: ${JSON.stringify(maxRadiusGeoJSON)},
+        });
+
+        map.addLayer({
+            id: 'maxRadiusLayer',
+            type: 'line',
+            source: 'maxRadius',
+            layout: {},
+            paint: {
+                'line-color': 'rgba(255, 0, 0, 0.3)',
+                'line-width': 2,
+            },
+        });
+
+        // Add POI Clustering
+        map.addSource('pois', {
+            type: 'geojson',
+            data: ${JSON.stringify(poiGeoJSON)},
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 50,
+        });
+
+        map.addLayer({
+            id: 'clusters',
+            type: 'circle',
+            source: 'pois',
+            filter: ['has', 'point_count'],
+            paint: {
+                'circle-color': '#51bbd6',
+                'circle-radius': 20,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff',
+            },
+        });
+
+        map.addLayer({
+            id: 'cluster-count',
+            type: 'symbol',
+            source: 'pois',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': '{point_count_abbreviated}',
+                'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                'text-size': 12,
+            },
+        });
+
+        map.addLayer({
+            id: 'unclustered-point',
+            type: 'circle',
+            source: 'pois',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+                'circle-color': '#11b4da',
+                'circle-radius': 6,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#fff',
+            },
+        });
+
+        // Add user location as a dot
+        map.addSource('userLocation', {
+            type: 'geojson',
+            data: {
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [${location.longitude}, ${location.latitude}],
+                },
+            }
+        });
+
+        map.addLayer({
+            id: 'userLocationLayer',
+            type: 'circle',
+            source: 'userLocation',
+            paint: {
+                'circle-radius': 6,
+                'circle-color': '#0000ff',
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff',
+            }
+        });
+
+        // Handle POI click
+        map.on('click', 'unclustered-point', (e) => {
+            const coordinates = e.features[0].geometry.coordinates.slice();
+            const { title, id } = e.features[0].properties;
+
+            // Notify parent about the selected POI
+            window.ReactNativeWebView.postMessage(
+                JSON.stringify({ type: 'SELECT_POI', data: { id, title, coordinates } })
+            );
+
+            // Show a popup on click
+            new mapboxgl.Popup()
+                .setLngLat(coordinates)
+                .setHTML(\`<strong>\${title}</strong>\`)
+                .addTo(map);
+        });
+
+        // Add route if available
+        ${routeGeoJSON
+        ? `
+            map.addSource('route', {
+                type: 'geojson',
+                data: ${JSON.stringify(routeGeoJSON)},
+            });
+
+            map.addLayer({
+                id: 'routeLayer',
+                type: 'line',
+                source: 'route',
+                layout: {},
+                paint: {
+                    'line-color': '#ff00ff',
+                    'line-width': 4,
+                },
+            });
+        `
+        : ''}
+
+        // Fit map to isochrone bounds
+        map.fitBounds(${JSON.stringify(isochroneBounds)}, { padding: 20 });
+    });
+`;
 
     const html = `
     <!DOCTYPE html>

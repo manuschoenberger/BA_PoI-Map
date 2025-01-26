@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import MapView, { Polygon, Marker, Circle, Polyline } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
 import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
+import { LatLng } from "react-native-maps";
+import bbox from "@turf/bbox";
+import { multiPolygon } from "@turf/helpers";
 
 interface MapProps {
     location: LocationObjectCoords;
@@ -15,6 +18,12 @@ interface MapProps {
     routeCoordinates: { latitude: number; longitude: number }[] | null;
 }
 
+// Function to calculate the bounding box of the isochrone
+const calculateIsochroneBounds = (iso: Isochrone) => {
+    const isoMultiPolygon = multiPolygon(iso.coordinates);
+    return bbox(isoMultiPolygon);
+};
+
 export default function GoogleMapsMap({
                                           location,
                                           pois,
@@ -24,13 +33,13 @@ export default function GoogleMapsMap({
                                           setSelectedPOI,
                                           routeCoordinates,
                                       }: MapProps) {
-    // Process polygons to separate in-bounds and out-of-bounds segments
+    const mapRef = useRef<MapView>(null);
     const { inBoundsSegments, outOfBoundsSegments } = isochrone.coordinates.reduce(
         (
-            acc: { inBoundsSegments: { latitude: number; longitude: number }[][]; outOfBoundsSegments: { latitude: number; longitude: number }[][] },
+            acc: { inBoundsSegments: LatLng[][]; outOfBoundsSegments: LatLng[][] },
             polygon
         ) => {
-            let currentSegment: { latitude: number; longitude: number }[] = [];
+            let currentSegment: LatLng[] = [];
             let isOutOfBounds = false;
 
             polygon[0].forEach(([lng, lat], index) => {
@@ -68,9 +77,13 @@ export default function GoogleMapsMap({
         { inBoundsSegments: [], outOfBoundsSegments: [] }
     );
 
+    const isochroneBounds = calculateIsochroneBounds(isochrone);
+    const isochroneCoordinates = isochrone.coordinates.flat(2).map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
+
     return (
         <View style={styles.container}>
             <MapView
+                ref={mapRef}
                 style={styles.map}
                 initialRegion={{
                     latitude: location.latitude,
@@ -81,6 +94,14 @@ export default function GoogleMapsMap({
                 showsUserLocation={true}
                 userLocationUpdateInterval={30000}
                 onPress={() => setSelectedPOI(null)} // Deselect POI when clicking outside
+                onMapReady={() => {
+                    if (isochroneCoordinates.length > 0) {
+                        mapRef.current?.fitToCoordinates(isochroneCoordinates, {
+                            edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                            animated: true,
+                        });
+                    }
+                }}
             >
                 {/* Display POI markers */}
                 {pois.map((poi) => (
@@ -116,7 +137,7 @@ export default function GoogleMapsMap({
                 <Circle
                     center={{ latitude: location.latitude, longitude: location.longitude }}
                     radius={maxRadius} // In meters
-                    strokeColor="rgba(255, 0, 0, 0.5)"
+                    strokeColor="rgba(255, 0, 0, 0.3)"
                     fillColor="transparent"
                     strokeWidth={2}
                 />
