@@ -158,14 +158,14 @@ export default function Index() {
         if (!selectedPOI || !location) return;
 
         const start: [number, number] = [location.longitude, location.latitude];
-        const end = [selectedPOI.longitude, selectedPOI.latitude];
+        const end: [number, number] = [selectedPOI.longitude, selectedPOI.latitude];
 
         try {
             let route;
             if (travelMode === "public-transport") {
-                route = await fetchTravelTimeRoute(start, end); // Returns { coordinates: [...] }
+                route = await fetchTravelTimeRoute(start, end);
             } else {
-                route = await fetchMapboxRoute(start, end, travelMode); // Returns GeoJSON
+                route = await fetchMapboxRoute(start, end, travelMode);
             }
             setRouteGeoJSON(route); // Set the fetched route
         } catch (error) {
