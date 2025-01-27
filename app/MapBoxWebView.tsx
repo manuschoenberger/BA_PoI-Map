@@ -97,7 +97,7 @@ export default function MapBoxWebView({
 
     const isochroneBounds = calculateIsochroneBounds(isochrone);
 
-    const isochronePolygon = `
+    const render = `
     map.on('load', () => {
         // Add Isochrone polygons
         map.addSource('iso', {
@@ -281,7 +281,7 @@ export default function MapBoxWebView({
             });
 
             // Add Isochrone Polygon and Clusters
-            ${isochronePolygon}
+            ${render}
         </script>
     </body>
     </html>
