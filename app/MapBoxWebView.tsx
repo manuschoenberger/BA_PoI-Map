@@ -13,7 +13,7 @@ interface MapBoxWebViewProps {
     pois: POI[];
     isochrone: Isochrone;
     maxRadius: number;
-    travelMode: "driving" | "driving-traffic" | "walking" | "cycling" | "public_transport";
+    travelMode: "driving" | "driving-traffic" | "walking" | "cycling" | "public-transport";
     selectedPOI: POI | null;
     setSelectedPOI: (poi: POI | null) => void;
     routeGeoJSON: any;
@@ -225,13 +225,19 @@ export default function MapBoxWebView({
         });
 
         // Add route if available
-        ${routeGeoJSON
-        ? `
+        ${routeGeoJSON && routeGeoJSON.coordinates.length > 0
+            ? `
             map.addSource('route', {
                 type: 'geojson',
-                data: ${JSON.stringify(routeGeoJSON)},
+                data: {
+                    type: 'Feature',
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: ${JSON.stringify(routeGeoJSON.coordinates)},
+                    },
+                },
             });
-
+        
             map.addLayer({
                 id: 'routeLayer',
                 type: 'line',
@@ -243,7 +249,7 @@ export default function MapBoxWebView({
                 },
             });
         `
-        : ''}
+            : ''}
 
         // Fit map to isochrone bounds
         map.fitBounds(${JSON.stringify(isochroneBounds)}, { padding: 20 });

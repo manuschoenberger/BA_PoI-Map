@@ -23,6 +23,7 @@ import {
     fetchTravelTimeIsochrone,
     Isochrone,
     fetchMapboxRoute,
+    fetchTravelTimeRoute,
 } from "./utils/apiServices";
 
 export default function Index() {
@@ -160,7 +161,12 @@ export default function Index() {
         const end = [selectedPOI.longitude, selectedPOI.latitude];
 
         try {
-            const route = await fetchMapboxRoute(start, end, travelMode);
+            let route;
+            if (travelMode === "public-transport") {
+                route = await fetchTravelTimeRoute(start, end); // Returns { coordinates: [...] }
+            } else {
+                route = await fetchMapboxRoute(start, end, travelMode); // Returns GeoJSON
+            }
             setRouteGeoJSON(route); // Set the fetched route
         } catch (error) {
             console.error("Error fetching route:", error);

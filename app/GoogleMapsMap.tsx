@@ -157,10 +157,12 @@ export default function GoogleMapsMap({
                 ))}
 
                 {/* Display route */}
-                {routeCoordinates && (
+                {Array.isArray(routeCoordinates) && routeCoordinates.length > 0 && (
                     <Polyline
-                        coordinates={routeCoordinates}
-                        strokeColor="rgba(255, 0, 255, 0.8)" // Purple for the route
+                        coordinates={routeCoordinates
+                            .filter((coord): coord is { latitude: number; longitude: number } => coord !== null)
+                            .map((coord) => ({ latitude: coord.latitude, longitude: coord.longitude }))}
+                        strokeColor="rgba(255, 0, 255, 0.8)"
                         strokeWidth={4}
                     />
                 )}

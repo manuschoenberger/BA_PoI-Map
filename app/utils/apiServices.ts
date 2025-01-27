@@ -178,3 +178,50 @@ export const fetchMapboxRoute = async (
     const response = await axios.get(url);
     return response.data.routes[0].geometry;
 };
+
+export const fetchTravelTimeRoute = async (
+    start: [number, number],
+    end: [number, number]
+): Promise<{ coordinates: [number, number][] }> => {
+    const appId = process.env.EXPO_PUBLIC_TRAVELTIME_APP_ID;
+    const apiKey = process.env.EXPO_PUBLIC_TRAVELTIME_API_KEY;
+
+    const url = `https://api.traveltimeapp.com/v4/routes`;
+
+    const body = {
+        locations: [
+            { id: "start", coords: { lat: start[1], lng: start[0] } },
+            { id: "end", coords: { lat: end[1], lng: end[0] } },
+        ],
+        departure_searches: [
+            {
+                id: "public_transport_route",
+                departure_location_id: "start",
+                arrival_location_ids: ["end"],
+                transportation: { type: "public_transport" },
+                departure_time: new Date().toISOString(),
+            },
+        ],
+    };
+
+    const headers = {
+        "Content-Type": "application/json",
+        "X-Application-Id": appId,
+        "X-Api-Key": apiKey,
+    };
+
+    try {
+        const response = await axios.post(url, body, { headers });
+
+        // Combine coordinates from all parts into a single array
+        const parts = response.data.results[0].locations[0].properties[0].route.parts;
+        const coordinates: [number, number][] = parts.flatMap((part: any) =>
+            part.coords.map((coord: { lat: number; lng: number }) => [coord.lng, coord.lat])
+        );
+
+        return { coordinates };
+    } catch (error) {
+        console.error("Error fetching TravelTime route:", error);
+        throw error;
+    }
+};
