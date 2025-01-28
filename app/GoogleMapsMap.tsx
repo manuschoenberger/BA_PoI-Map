@@ -1,11 +1,10 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, { Polygon, Marker, Circle, Polyline } from "react-native-maps";
+import MapView, { Polygon, Marker, Circle, Polyline, LatLng } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
 import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
 import { getColorByMode } from "@/app/utils/routeColorUtils";
-import { LatLng } from "react-native-maps";
 
 interface MapProps {
     location: LocationObjectCoords;
@@ -26,6 +25,7 @@ export default function GoogleMapsMap({
                                           routeCoordinates,
                                       }: MapProps) {
     const mapRef = useRef<MapView>(null);
+
     const { inBoundsSegments, outOfBoundsSegments } = isochrone.coordinates.reduce(
         (
             acc: { inBoundsSegments: LatLng[][]; outOfBoundsSegments: LatLng[][] },
@@ -71,6 +71,15 @@ export default function GoogleMapsMap({
 
     const isochroneCoordinates = isochrone.coordinates.flat(2).map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
 
+    useEffect(() => {
+        if (isochroneCoordinates.length > 0) {
+            mapRef.current?.fitToCoordinates(isochroneCoordinates, {
+                edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                animated: true,
+            });
+        }
+    }, [isochroneCoordinates]);
+
     return (
         <View style={styles.container}>
             <MapView
@@ -85,14 +94,6 @@ export default function GoogleMapsMap({
                 showsUserLocation={true}
                 userLocationUpdateInterval={30000}
                 onPress={() => setSelectedPOI(null)} // Deselect POI when clicking outside
-                onMapReady={() => {
-                    if (isochroneCoordinates.length > 0) {
-                        mapRef.current?.fitToCoordinates(isochroneCoordinates, {
-                            edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-                            animated: true,
-                        });
-                    }
-                }}
             >
                 {/* Display POI markers */}
                 {pois.map((poi) => (
@@ -148,13 +149,13 @@ export default function GoogleMapsMap({
                 ))}
 
                 {/* Display route */}
-                {routeCoordinates && routeCoordinates.parts.map((part, index) => (                    console.log("Route Coordinates at GoogleMapsMap.tsx: ", routeCoordinates),
-                        <Polyline
-                            key={`route-part-${index}`}
-                            coordinates={part.coords.map(coord => ({ latitude: coord.latitude, longitude: coord.longitude }))}
-                            strokeColor={getColorByMode(part.mode)}
-                            strokeWidth={4}
-                        />
+                {routeCoordinates && routeCoordinates.parts.map((part, index) => (
+                    <Polyline
+                        key={`route-part-${index}`}
+                        coordinates={part.coords.map(coord => ({ latitude: coord.latitude, longitude: coord.longitude }))}
+                        strokeColor={getColorByMode(part.mode)}
+                        strokeWidth={4}
+                    />
                 ))}
             </MapView>
         </View>

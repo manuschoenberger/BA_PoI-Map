@@ -4,8 +4,9 @@ import { WebView } from "react-native-webview";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
 import { getColorByMode } from "@/app/utils/routeColorUtils";
-import { calculateIsochroneBounds} from "@/app/utils/isochroneBoundsUtils";
+import { calculateIsochroneBounds } from "@/app/utils/isochroneBoundsUtils";
 import { createGeoJSONCircle } from "@/app/utils/maxRadiusCircleUtils";
+import { getDistanceFromLatLonInKm } from "@/app/utils/distanceUtils";
 
 const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
 
@@ -42,36 +43,131 @@ export default function MapBoxWebView({
 
     const maxRadiusGeoJSON = createGeoJSONCircle([location.longitude, location.latitude], maxRadius / 1000);
 
-    const isochronePolygons = isochrone.coordinates.map((polygon) => ({
-        type: "Feature",
-        geometry: {
-            type: "Polygon",
-            coordinates: polygon,
+    const { inBoundsSegments, outOfBoundsSegments } = isochrone.coordinates.reduce(
+        (
+            acc: { inBoundsSegments: [number, number][][]; outOfBoundsSegments: [number, number][][] },
+            polygon
+        ) => {
+            let currentSegment: [number, number][] = [];
+            let isOutOfBounds = false;
+
+            polygon[0].forEach(([lng, lat], index) => {
+                const distance = getDistanceFromLatLonInKm(location.latitude, location.longitude, lat, lng);
+                const point: [number, number] = [lng, lat];
+                const outOfBounds = distance > maxRadius / 1000; // Convert maxRadius to km
+
+                if (outOfBounds !== isOutOfBounds) {
+                    if (currentSegment.length > 0) {
+                        currentSegment.push(point);
+                        if (isOutOfBounds) {
+                            acc.outOfBoundsSegments.push(currentSegment);
+                        } else {
+                            acc.inBoundsSegments.push(currentSegment);
+                        }
+                        currentSegment = [point];
+                    }
+                    isOutOfBounds = outOfBounds;
+                } else {
+                    currentSegment.push(point);
+                }
+
+                // Handle the last point
+                if (index === polygon[0].length - 1 && currentSegment.length > 0) {
+                    if (isOutOfBounds) {
+                        acc.outOfBoundsSegments.push(currentSegment);
+                    } else {
+                        acc.inBoundsSegments.push(currentSegment);
+                    }
+                }
+            });
+
+            return acc;
         },
-        properties: {},
-    }));
+        { inBoundsSegments: [], outOfBoundsSegments: [] }
+    );
 
     const isochroneBounds = calculateIsochroneBounds(isochrone);
 
     const render = `
     map.on('load', () => {
-        // Add Isochrone polygons
-        map.addSource('iso', {
+        // Add Isochrone fill
+        map.addSource('isoFill', {
             type: 'geojson',
             data: {
                 type: 'FeatureCollection',
-                features: ${JSON.stringify(isochronePolygons)},
+                features: ${JSON.stringify(isochrone.coordinates.map(polygon => ({
+        type: 'Feature',
+        geometry: {
+            type: 'Polygon',
+            coordinates: polygon,
+        },
+        properties: {},
+    })))},
             }
         });
 
         map.addLayer({
-            id: 'isoLayer',
+            id: 'isoFillLayer',
             type: 'fill',
-            source: 'iso',
+            source: 'isoFill',
             layout: {},
             paint: {
-                'fill-color': '#007cbf',
-                'fill-opacity': 0.3
+                'fill-color': 'rgba(0, 150, 255, 0.3)',
+                'fill-opacity': 0.5,
+            }
+        });
+
+        // Add Isochrone in-bounds segments
+        map.addSource('isoInBounds', {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: ${JSON.stringify(inBoundsSegments.map(segment => ({
+        type: 'Feature',
+        geometry: {
+            type: 'LineString',
+            coordinates: segment,
+        },
+        properties: {},
+    })))},
+            }
+        });
+
+        map.addLayer({
+            id: 'isoInBoundsLayer',
+            type: 'line',
+            source: 'isoInBounds',
+            layout: {},
+            paint: {
+                'line-color': '#007cbf',
+                'line-width': 2,
+            }
+        });
+
+        // Add Isochrone out-of-bounds segments
+        map.addSource('isoOutOfBounds', {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: ${JSON.stringify(outOfBoundsSegments.map(segment => ({
+        type: 'Feature',
+        geometry: {
+            type: 'LineString',
+            coordinates: segment,
+        },
+        properties: {},
+    })))},
+            }
+        });
+
+        map.addLayer({
+            id: 'isoOutOfBoundsLayer',
+            type: 'line',
+            source: 'isoOutOfBounds',
+            layout: {},
+            paint: {
+                'line-color': 'rgba(255, 0, 0, 0.8)',
+                'line-width': 2,
             }
         });
 
@@ -148,7 +244,7 @@ export default function MapBoxWebView({
                     type: 'Point',
                     coordinates: [${location.longitude}, ${location.latitude}],
                 },
-            }
+            },
         });
 
         map.addLayer({
@@ -193,7 +289,7 @@ export default function MapBoxWebView({
                     },
                 },
             });
-        
+
             map.addLayer({
                 id: 'routeLayer-part-${index}',
                 type: 'line',
@@ -252,8 +348,7 @@ export default function MapBoxWebView({
                 onMessage={(event) => {
                     const message = JSON.parse(event.nativeEvent.data);
                     if (message.type === "SELECT_POI") {
-                        const { id, title, coordinates } = message.data;
-                        setSelectedPOI({ id, name: title, latitude: coordinates[1], longitude: coordinates[0] });
+                        setSelectedPOI(pois.find(poi => poi.id === message.data.id) || null);
                     }
                 }}
             />

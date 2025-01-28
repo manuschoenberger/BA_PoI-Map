@@ -188,8 +188,6 @@ export const fetchMapboxRoute = async (
             })),
         }];
 
-        console.log("Route Coordinates at apiServices.ts: ", parts);
-
         return { parts };
     } catch (error) {
         console.error("Error fetching Mapbox route:", error);
