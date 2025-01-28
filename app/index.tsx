@@ -26,6 +26,10 @@ import {
     fetchTravelTimeRoute,
 } from "./utils/apiServices";
 
+type RouteGeoJSON = {
+    parts: { mode: string; coords: { lat: number; lng: number }[] }[];
+};
+
 export default function Index() {
     const [useMapBox, setUseMapBox] = useState(true);
     const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
@@ -37,7 +41,7 @@ export default function Index() {
     const [travelMode, setTravelMode] = useState<"driving" | "driving-traffic" | "walking" | "cycling" | "public-transport">("driving"); // Default is driving
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedPOI, setSelectedPOI] = useState<POI | null>(null); // Selected POI for routing
-    const [routeGeoJSON, setRouteGeoJSON] = useState(null); // Route GeoJSON
+    const [routeGeoJSON, setRouteGeoJSON] = useState<RouteGeoJSON | null>(null);
 
     // Default time options based on travel mode
     const timeOptionsMap: Record<
@@ -167,7 +171,7 @@ export default function Index() {
             } else {
                 route = await fetchMapboxRoute(start, end, travelMode);
             }
-            setRouteGeoJSON(route); // Set the fetched route
+            setRouteGeoJSON({ parts: route.parts });
         } catch (error) {
             console.error("Error fetching route:", error);
         }
@@ -181,19 +185,17 @@ export default function Index() {
 
     const maxRadius = dataSource === "google" ? 50000 : 70000;
 
-    if (!location && !errorMsg) {
+    if (!location || errorMsg) {
         return (
             <View style={styles.loader}>
-                <ActivityIndicator size="large" color="#0000ff" />
-                <Text>Fetching location...</Text>
-            </View>
-        );
-    }
-
-    if (errorMsg) {
-        return (
-            <View style={styles.loader}>
-                <Text style={{ color: "red" }}>{errorMsg}</Text>
+                {errorMsg ? (
+                    <Text style={{ color: "red" }}>{errorMsg}</Text>
+                ) : (
+                    <>
+                        <ActivityIndicator size="large" color="#0000ff" />
+                        <Text>Fetching location...</Text>
+                    </>
+                )}
             </View>
         );
     }
@@ -291,7 +293,7 @@ export default function Index() {
                         maxRadius={maxRadius}
                         selectedPOI={selectedPOI}
                         setSelectedPOI={setSelectedPOI}
-                        routeCoordinates={routeGeoJSON ? routeGeoJSON.coordinates.map(([lng, lat]) => ({ latitude: lat, longitude: lng })) : null}
+                        routeCoordinates={routeGeoJSON}
                     />
                 )
             )}

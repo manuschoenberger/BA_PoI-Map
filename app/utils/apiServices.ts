@@ -172,17 +172,35 @@ export const fetchMapboxRoute = async (
     start: [number, number],
     end: [number, number],
     profile: "driving" | "driving-traffic" | "walking" | "cycling"
-): Promise<any> => {
+): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[] }> => {
     const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
     const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${apiKey}`;
-    const response = await axios.get(url);
-    return response.data.routes[0].geometry;
+
+    try {
+        const response = await axios.get(url);
+        const coordinates = response.data.routes[0].geometry.coordinates;
+
+        const parts = [{
+            mode: profile,
+            coords: coordinates.map(([lng, lat]: [number, number]) => ({
+                lat,
+                lng,
+            })),
+        }];
+
+        console.log("Route Coordinates at apiServices.ts: ", parts);
+
+        return { parts };
+    } catch (error) {
+        console.error("Error fetching Mapbox route:", error);
+        throw error;
+    }
 };
 
 export const fetchTravelTimeRoute = async (
     start: [number, number],
     end: [number, number]
-): Promise<{ coordinates: [number, number][] }> => {
+): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[] }> => {
     const appId = process.env.EXPO_PUBLIC_TRAVELTIME_APP_ID;
     const apiKey = process.env.EXPO_PUBLIC_TRAVELTIME_API_KEY;
 
@@ -213,13 +231,15 @@ export const fetchTravelTimeRoute = async (
     try {
         const response = await axios.post(url, body, { headers });
 
-        // Combine coordinates from all parts into a single array
-        const parts = response.data.results[0].locations[0].properties[0].route.parts;
-        const coordinates: [number, number][] = parts.flatMap((part: any) =>
-            part.coords.map((coord: { lat: number; lng: number }) => [coord.lng, coord.lat])
-        );
+        const parts = response.data.results[0].locations[0].properties[0].route.parts.map((part: any) => ({
+            mode: part.mode,
+            coords: part.coords.map((coord: { lat: number; lng: number }) => ({
+                lat: coord.lat,
+                lng: coord.lng,
+            })),
+        }));
 
-        return { coordinates };
+        return { parts };
     } catch (error) {
         console.error("Error fetching TravelTime route:", error);
         throw error;

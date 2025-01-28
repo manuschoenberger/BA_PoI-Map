@@ -4,9 +4,8 @@ import MapView, { Polygon, Marker, Circle, Polyline } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
 import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
+import { getColorByMode } from "@/app/utils/routeColorUtils";
 import { LatLng } from "react-native-maps";
-import bbox from "@turf/bbox";
-import { multiPolygon } from "@turf/helpers";
 
 interface MapProps {
     location: LocationObjectCoords;
@@ -15,21 +14,14 @@ interface MapProps {
     maxRadius: number;
     selectedPOI: POI | null;
     setSelectedPOI: (poi: POI | null) => void;
-    routeCoordinates: { latitude: number; longitude: number }[] | null;
+    routeCoordinates: { parts: { mode: string; coords: { latitude: number; longitude: number }[] }[] } | null;
 }
-
-// Function to calculate the bounding box of the isochrone
-const calculateIsochroneBounds = (iso: Isochrone) => {
-    const isoMultiPolygon = multiPolygon(iso.coordinates);
-    return bbox(isoMultiPolygon);
-};
 
 export default function GoogleMapsMap({
                                           location,
                                           pois,
                                           isochrone,
                                           maxRadius,
-                                          selectedPOI,
                                           setSelectedPOI,
                                           routeCoordinates,
                                       }: MapProps) {
@@ -77,7 +69,6 @@ export default function GoogleMapsMap({
         { inBoundsSegments: [], outOfBoundsSegments: [] }
     );
 
-    const isochroneBounds = calculateIsochroneBounds(isochrone);
     const isochroneCoordinates = isochrone.coordinates.flat(2).map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
 
     return (
@@ -157,15 +148,14 @@ export default function GoogleMapsMap({
                 ))}
 
                 {/* Display route */}
-                {Array.isArray(routeCoordinates) && routeCoordinates.length > 0 && (
-                    <Polyline
-                        coordinates={routeCoordinates
-                            .filter((coord): coord is { latitude: number; longitude: number } => coord !== null)
-                            .map((coord) => ({ latitude: coord.latitude, longitude: coord.longitude }))}
-                        strokeColor="rgba(255, 0, 255, 0.8)"
-                        strokeWidth={4}
-                    />
-                )}
+                {routeCoordinates && routeCoordinates.parts.map((part, index) => (                    console.log("Route Coordinates at GoogleMapsMap.tsx: ", routeCoordinates),
+                        <Polyline
+                            key={`route-part-${index}`}
+                            coordinates={part.coords.map(coord => ({ latitude: coord.latitude, longitude: coord.longitude }))}
+                            strokeColor={getColorByMode(part.mode)}
+                            strokeWidth={4}
+                        />
+                ))}
             </MapView>
         </View>
     );

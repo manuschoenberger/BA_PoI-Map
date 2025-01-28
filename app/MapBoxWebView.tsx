@@ -3,8 +3,9 @@ import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
-import bbox from "@turf/bbox";
-import { multiPolygon } from "@turf/helpers";
+import { getColorByMode } from "@/app/utils/routeColorUtils";
+import { calculateIsochroneBounds} from "@/app/utils/isochroneBoundsUtils";
+import { createGeoJSONCircle } from "@/app/utils/maxRadiusCircleUtils";
 
 const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
 
@@ -16,59 +17,14 @@ interface MapBoxWebViewProps {
     travelMode: "driving" | "driving-traffic" | "walking" | "cycling" | "public-transport";
     selectedPOI: POI | null;
     setSelectedPOI: (poi: POI | null) => void;
-    routeGeoJSON: any;
+    routeGeoJSON: { parts: { mode: string; coords: { lat: number; lng: number }[] }[] } | null;
 }
-
-// Function to create a GeoJSON polygon for the maxRadius circle
-const createGeoJSONCircle = (center: [number, number], radiusInKm: number, points = 64) => {
-    const coords = {
-        latitude: center[1],
-        longitude: center[0],
-    };
-
-    const km = radiusInKm;
-    const ret = [];
-    const distanceX = km / (111.320 * Math.cos((coords.latitude * Math.PI) / 180)); // Longitudinal distance
-    const distanceY = km / 110.574; // Latitudinal distance
-
-    for (let i = 0; i < points; i++) {
-        const theta = (i / points) * (2 * Math.PI); // Angle for each point
-        const x = distanceX * Math.cos(theta);
-        const y = distanceY * Math.sin(theta);
-
-        ret.push([coords.longitude + x, coords.latitude + y]);
-    }
-
-    // Close the polygon by repeating the first point
-    ret.push(ret[0]);
-
-    return {
-        type: "FeatureCollection",
-        features: [
-            {
-                type: "Feature",
-                geometry: {
-                    type: "Polygon",
-                    coordinates: [ret],
-                },
-            },
-        ],
-    };
-};
-
-// Function to calculate the bounding box of the isochrone
-const calculateIsochroneBounds = (isochrone: Isochrone) => {
-    const isoMultiPolygon = multiPolygon(isochrone.coordinates);
-    return bbox(isoMultiPolygon);
-};
 
 export default function MapBoxWebView({
                                           location,
                                           pois,
                                           isochrone,
                                           maxRadius,
-                                          travelMode,
-                                          selectedPOI,
                                           setSelectedPOI,
                                           routeGeoJSON,
                                       }: MapBoxWebViewProps) {
@@ -225,31 +181,31 @@ export default function MapBoxWebView({
         });
 
         // Add route if available
-        ${routeGeoJSON && routeGeoJSON.coordinates.length > 0
-            ? `
-            map.addSource('route', {
+        ${routeGeoJSON && routeGeoJSON.parts.length > 0
+        ? routeGeoJSON.parts.map((part, index) => `
+            map.addSource('route-part-${index}', {
                 type: 'geojson',
                 data: {
                     type: 'Feature',
                     geometry: {
                         type: 'LineString',
-                        coordinates: ${JSON.stringify(routeGeoJSON.coordinates)},
+                        coordinates: ${JSON.stringify(part.coords.map(coord => [coord.lng, coord.lat]))},
                     },
                 },
             });
         
             map.addLayer({
-                id: 'routeLayer',
+                id: 'routeLayer-part-${index}',
                 type: 'line',
-                source: 'route',
+                source: 'route-part-${index}',
                 layout: {},
                 paint: {
-                    'line-color': '#ff00ff',
+                    'line-color': '${getColorByMode(part.mode)}',
                     'line-width': 4,
                 },
             });
-        `
-            : ''}
+        `).join('')
+        : ''}
 
         // Fit map to isochrone bounds
         map.fitBounds(${JSON.stringify(isochroneBounds)}, { padding: 20 });
