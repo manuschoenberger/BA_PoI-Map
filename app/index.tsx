@@ -43,6 +43,15 @@ export default function Index() {
     const [selectedPOI, setSelectedPOI] = useState<POI | null>(null); // Selected POI for routing
     const [routeGeoJSON, setRouteGeoJSON] = useState<RouteGeoJSON | null>(null);
 
+    // Temporary state variables for modal options
+    const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
+    const [tempDataSource, setTempDataSource] = useState(dataSource);
+    const [tempSelectedTime, setTempSelectedTime] = useState(selectedTime);
+    const [tempTravelMode, setTempTravelMode] = useState(travelMode);
+
+    // State variable to track if changes have been made
+    const [hasChanges, setHasChanges] = useState(false);
+
     // Default time options based on travel mode
     const timeOptionsMap: Record<
         typeof travelMode,
@@ -55,17 +64,17 @@ export default function Index() {
         "public-transport": { times: [30, 60, 120, 180], defaultTime: 30 },
     };
 
-    const timeOptions = timeOptionsMap[travelMode].times;
+    const timeOptions = timeOptionsMap[tempTravelMode].times;
 
     // Update selected time when travel mode changes
     useEffect(() => {
-        const { defaultTime } = timeOptionsMap[travelMode];
+        const { defaultTime } = timeOptionsMap[tempTravelMode];
 
         // If the current time isn't valid for the new mode, reset to the default time
-        if (!timeOptions.includes(selectedTime)) {
-            setSelectedTime(defaultTime);
+        if (!timeOptions.includes(tempSelectedTime)) {
+            setTempSelectedTime(defaultTime);
         }
-    }, [travelMode]);
+    }, [tempTravelMode]);
 
     useEffect(() => {
         (async () => {
@@ -183,6 +192,15 @@ export default function Index() {
         setSelectedPOI(null);
     };
 
+    const handleModalClose = () => {
+        setUseMapBox(tempUseMapBox);
+        setDataSource(tempDataSource);
+        setSelectedTime(tempSelectedTime);
+        setTravelMode(tempTravelMode);
+        setIsModalVisible(false);
+        setHasChanges(false); // Reset hasChanges when modal is closed
+    };
+
     const maxRadius = dataSource === "google" ? 50000 : 70000;
 
     if (!location || errorMsg) {
@@ -222,10 +240,13 @@ export default function Index() {
                         {menuOptions.map((item) => (
                             <Pressable
                                 key={item.label}
-                                onPress={() => setUseMapBox(item.value)}
+                                onPress={() => {
+                                    setTempUseMapBox(item.value);
+                                    setHasChanges(true);
+                                }}
                             >
                                 <Text style={styles.radioOption}>
-                                    {useMapBox === item.value ? "◉" : "○"} {item.label}
+                                    {tempUseMapBox === item.value ? "◉" : "○"} {item.label}
                                 </Text>
                             </Pressable>
                         ))}
@@ -233,18 +254,24 @@ export default function Index() {
                         {poiOptions.map((item) => (
                             <Pressable
                                 key={item.label}
-                                onPress={() => setDataSource(item.value as "google" | "osm")}
+                                onPress={() => {
+                                    setTempDataSource(item.value as "google" | "osm");
+                                    setHasChanges(true);
+                                }}
                             >
                                 <Text style={styles.radioOption}>
-                                    {dataSource === item.value ? "◉" : "○"} {item.label}
+                                    {tempDataSource === item.value ? "◉" : "○"} {item.label}
                                 </Text>
                             </Pressable>
                         ))}
                         <Text style={styles.modalTitle}>Select Isochrone Time</Text>
                         <View style={styles.pickerContainer}>
                             <Picker
-                                selectedValue={selectedTime}
-                                onValueChange={(value) => setSelectedTime(value)}
+                                selectedValue={tempSelectedTime}
+                                onValueChange={(value) => {
+                                    setTempSelectedTime(value);
+                                    setHasChanges(true);
+                                }}
                                 style={styles.picker}
                             >
                                 {timeOptions.map((time) => (
@@ -256,15 +283,18 @@ export default function Index() {
                         {modeOptions.map((item) => (
                             <Pressable
                                 key={item.label}
-                                onPress={() => setTravelMode(item.value as typeof travelMode)}
+                                onPress={() => {
+                                    setTempTravelMode(item.value as typeof travelMode);
+                                    setHasChanges(true);
+                                }}
                             >
                                 <Text style={styles.radioOption}>
-                                    {travelMode === item.value ? "◉" : "○"} {item.label}
+                                    {tempTravelMode === item.value ? "◉" : "○"} {item.label}
                                 </Text>
                             </Pressable>
                         ))}
-                        <Pressable onPress={() => setIsModalVisible(false)} style={styles.closeButton}>
-                            <Text style={styles.closeButtonText}>Close</Text>
+                        <Pressable onPress={handleModalClose} style={styles.closeButton}>
+                            <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
                         </Pressable>
                     </View>
                 </View>
@@ -278,7 +308,6 @@ export default function Index() {
                         pois={pois}
                         isochrone={isochrone}
                         maxRadius={maxRadius}
-                        travelMode={travelMode}
                         selectedPOI={selectedPOI}
                         setSelectedPOI={setSelectedPOI}
                         routeGeoJSON={routeGeoJSON}

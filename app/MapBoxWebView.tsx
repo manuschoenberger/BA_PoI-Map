@@ -14,7 +14,6 @@ interface MapBoxWebViewProps {
     pois: POI[];
     isochrone: Isochrone;
     maxRadius: number;
-    travelMode: "driving" | "driving-traffic" | "walking" | "cycling" | "public-transport";
     selectedPOI: POI | null;
     setSelectedPOI: (poi: POI | null) => void;
     routeGeoJSON: { parts: { mode: string; coords: { lat: number; lng: number }[] }[] } | null;
@@ -25,7 +24,6 @@ export default function MapBoxWebView({
                                           pois,
                                           isochrone,
                                           maxRadius,
-                                          travelMode,
                                           setSelectedPOI,
                                           routeGeoJSON,
                                       }: MapBoxWebViewProps) {
@@ -104,7 +102,6 @@ export default function MapBoxWebView({
     // Inject JavaScript to update the map dynamically
     const updateMap = () => {
         if (webViewRef.current) {
-            console.log("routePartsRef.current", routePartsRef.current);
             webViewRef.current.injectJavaScript(`
                 if (map.getSource('isoFill')) {
                     map.getSource('isoFill').setData(${JSON.stringify(isochroneGeoJSON)});
@@ -142,19 +139,15 @@ export default function MapBoxWebView({
 
     // Function to remove the route from the map
     const removeRoute = () => {
-        console.log("Route parts:", routePartsRef.current);
         if (webViewRef.current && routePartsRef.current.length > 0) {
-            console.log("Removing route from the map");
             webViewRef.current.injectJavaScript(`
                 ${routePartsRef.current
                 .map(
                     (part) => `
                         if (map.getLayer('${part.id}')) {
-                            console.log('Removing layer: ${part.id}');
                             map.removeLayer('${part.id}');
                         }
                         if (map.getSource('${part.id}')) {
-                            console.log('Removing source: ${part.id}');
                             map.removeSource('${part.id}');
                         }
                     `
