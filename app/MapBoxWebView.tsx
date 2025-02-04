@@ -99,20 +99,48 @@ export default function MapBoxWebView({
         })),
     };
 
+    // Map transport modes to Mapbox Maki icons
+    const transportModeIcons: Record<string, string> = {
+        walk: "pitch",
+        bus: "bus",
+        train: "rail",
+        cycling: "bicycle",
+        driving: "car",
+    };
+
+    // Extract start points of each section for mode icons
+    const modeIconsGeoJSON = {
+        type: "FeatureCollection",
+        features: routeGeoJSON
+            ? routeGeoJSON.parts.map((part, index) => ({
+                type: "Feature",
+                properties: { icon: transportModeIcons[part.mode] || "marker" },
+                geometry: {
+                    type: "Point",
+                    coordinates: [
+                        part.coords[0].lng, // First point of the section
+                        part.coords[0].lat,
+                    ],
+                },
+            }))
+            : [],
+    };
+
     // Inject JavaScript to update the map dynamically
     const updateMap = () => {
         if (webViewRef.current) {
             webViewRef.current.injectJavaScript(`
-                if (map.getSource('isoFill')) {
-                    map.getSource('isoFill').setData(${JSON.stringify(isochroneGeoJSON)});
-                }
-                if (map.getSource('maxRadius')) {
-                    map.getSource('maxRadius').setData(${JSON.stringify(maxRadiusGeoJSON)});
-                }
-                if (map.getSource('pois')) {
-                    map.getSource('pois').setData(${JSON.stringify(poiGeoJSON)});
-                }
-                ${routePartsRef.current
+            if (map.getSource('isoFill')) {
+                map.getSource('isoFill').setData(${JSON.stringify(isochroneGeoJSON)});
+            }
+            if (map.getSource('maxRadius')) {
+                map.getSource('maxRadius').setData(${JSON.stringify(maxRadiusGeoJSON)});
+            }
+            if (map.getSource('pois')) {
+                map.getSource('pois').setData(${JSON.stringify(poiGeoJSON)});
+            }
+
+            ${routePartsRef.current
                 .map(
                     (part) => `
                         if (map.getSource('${part.id}')) {
@@ -133,15 +161,41 @@ export default function MapBoxWebView({
                     `
                 )
                 .join("")}
-            `);
+
+            // Remove existing mode icons layer if needed
+            if (map.getLayer('modeIconsLayer')) {
+                map.removeLayer('modeIconsLayer');
+            }
+            if (map.getSource('modeIcons')) {
+                map.getSource('modeIcons').setData(${JSON.stringify(modeIconsGeoJSON)});
+            } else {
+                map.addSource('modeIcons', {
+                    type: 'geojson',
+                    data: ${JSON.stringify(modeIconsGeoJSON)}
+                });
+            }
+
+            // Add mode icons AFTER route lines, so they appear on top
+            map.addLayer({
+                id: 'modeIconsLayer',
+                type: 'symbol',
+                source: 'modeIcons',
+                layout: {
+                    'icon-image': ['get', 'icon'],
+                    'icon-size': 1.2,
+                    'icon-anchor': 'center'
+                }
+            });
+        `);
         }
     };
 
-    // Function to remove the route from the map
+
+    // Function to remove the route and mode icons from the map
     const removeRoute = () => {
         if (webViewRef.current && routePartsRef.current.length > 0) {
             webViewRef.current.injectJavaScript(`
-                ${routePartsRef.current
+            ${routePartsRef.current
                 .map(
                     (part) => `
                         if (map.getLayer('${part.id}')) {
@@ -153,7 +207,13 @@ export default function MapBoxWebView({
                     `
                 )
                 .join("")}
-            `);
+            if (map.getLayer('modeIconsLayer')) {
+                map.removeLayer('modeIconsLayer');
+            }
+            if (map.getSource('modeIcons')) {
+                map.removeSource('modeIcons');
+            }
+        `);
         }
     };
 

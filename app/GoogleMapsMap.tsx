@@ -1,10 +1,11 @@
 import React, { useRef, useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, Image } from "react-native";
 import MapView, { Polygon, Marker, Circle, Polyline, LatLng } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
 import { POI, Isochrone } from "./utils/apiServices";
 import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
 import { getColorByMode } from "@/app/utils/routeColorUtils";
+import { transportModeIcons } from "@/app/utils/modeIcons";
 
 interface MapProps {
     location: LocationObjectCoords;
@@ -13,7 +14,7 @@ interface MapProps {
     maxRadius: number;
     selectedPOI: POI | null;
     setSelectedPOI: (poi: POI | null) => void;
-    routeCoordinates: { parts: { mode: string; coords: { latitude: number; longitude: number }[] }[] } | null;
+    routeGeoJSON: { parts: { mode: string; coords: { lat: number; lng: number }[] }[] } | null;
 }
 
 export default function GoogleMapsMap({
@@ -22,7 +23,7 @@ export default function GoogleMapsMap({
                                           isochrone,
                                           maxRadius,
                                           setSelectedPOI,
-                                          routeCoordinates,
+                                          routeGeoJSON,
                                       }: MapProps) {
     const mapRef = useRef<MapView>(null);
 
@@ -149,14 +150,32 @@ export default function GoogleMapsMap({
                 ))}
 
                 {/* Display route */}
-                {routeCoordinates && routeCoordinates.parts.map((part, index) => (
+                {routeGeoJSON && routeGeoJSON.parts.map((part, index) => (
                     <Polyline
                         key={`route-part-${index}`}
-                        coordinates={part.coords.map(coord => ({ latitude: coord.latitude, longitude: coord.longitude }))}
+                        coordinates={part.coords.map(coord => ({ latitude: coord.lat, longitude: coord.lng }))}
                         strokeColor={getColorByMode(part.mode)}
                         strokeWidth={4}
                     />
                 ))}
+
+                {/* Display mode icons at the start of each route section */}
+                {routeGeoJSON && routeGeoJSON.parts.map((part, index) => {
+                    const startCoord = part.coords[0]; // First point of the section
+                    const iconSource = transportModeIcons[part.mode];
+
+                    if (!startCoord || !iconSource) return null;
+
+                    return (
+                        <Marker
+                            key={`mode-icon-${index}`}
+                            coordinate={{ latitude: startCoord.lat, longitude: startCoord.lng }}
+                            anchor={{ x: 0.5, y: 0.5 }}
+                        >
+                            <Image source={iconSource} style={styles.icon} />
+                        </Marker>
+                    );
+                })}
             </MapView>
         </View>
     );
@@ -171,5 +190,10 @@ const styles = StyleSheet.create({
     map: {
         width: "100%",
         height: "100%",
+    },
+    icon: {
+        width: 30,  // Adjust as needed
+        height: 30,
+        resizeMode: "contain",
     },
 });

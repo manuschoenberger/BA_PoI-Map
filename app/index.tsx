@@ -322,7 +322,7 @@ export default function Index() {
                         maxRadius={maxRadius}
                         selectedPOI={selectedPOI}
                         setSelectedPOI={setSelectedPOI}
-                        routeCoordinates={routeGeoJSON}
+                        routeGeoJSON={routeGeoJSON}
                     />
                 )
             )}
