@@ -8,6 +8,7 @@ export interface POI {
     name: string;
     latitude: number;
     longitude: number;
+    type?: string;
 }
 
 // Define the structure for Isochrone polygons
@@ -59,19 +60,24 @@ export const fetchGooglePOIs = async (latitude: number, longitude: number): Prom
 
 // Fetch POIs from OpenStreetMap
 export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
-    const radius = 70000; // Approximate radius of 50 km
-    // Filter for specific amenities to reduce the number of results
-
-    // const amenityFilters = ["restaurant","cafe","park","museum","hotel","tourist_attraction",].join("|");
+    const radius = 70000;
     const amenityFilters = [
+        "restaurant",
+        "cafe",
         "park",
         "museum",
         "hotel",
         "tourist_attraction",
     ].join("|");
 
-    // Construct the Overpass API query with filtering by amenities
-    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity~"${amenityFilters}"](around:${radius},${latitude},${longitude});out;`;
+    const tourismFilters = [
+        "hotel",
+        "museum",
+        "attraction",
+    ].join("|");
+
+    // Construct the Overpass API query with filtering by amenities and tourism
+    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity~"${amenityFilters}"](around:${radius},${latitude},${longitude});node[tourism~"${tourismFilters}"](around:${radius},${latitude},${longitude});out;`;
 
     try {
         const response = await axios.get(url);
@@ -88,6 +94,75 @@ export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise
     } catch (error) {
         console.error("Error fetching OSM POIs:", error);
         throw error;
+    }
+};
+
+// Fetch Google POI details
+export const fetchGooglePOIDetails = async (poiId: string): Promise<any> => {
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${poiId}&key=${apiKey}`;
+
+    try {
+        const response = await axios.get(url);
+        const result = response.data.result;
+
+        return {
+            name: result.name,
+            address: result.formatted_address,
+            phone: result.formatted_phone_number,
+            website: result.website,
+            openingHours: result.opening_hours?.weekday_text,
+            rating: result.rating,
+            reviews: result.reviews?.map((review: any) => review.text),
+            type: result.types?.[0],
+        };
+    } catch (error) {
+        console.error("Error fetching Google POI details:", error);
+        throw error;
+    }
+};
+
+// Fetch OSM POI details
+export const fetchOSMPOIDetails = async (poiId: string): Promise<any> => {
+    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node(${poiId});out;`;
+
+    try {
+        const response = await axios.get(url);
+        const result = response.data.elements[0];
+
+        return {
+            name: result.tags.name,
+            address: result.tags["addr:full"],
+            phone: result.tags.phone,
+            website: result.tags.website,
+            openingHours: result.tags.opening_hours,
+            rating: null, // OSM does not provide ratings
+            reviews: null, // OSM does not provide reviews
+            type: result.tags.amenity,
+        };
+    } catch (error) {
+        console.error("Error fetching OSM POI details:", error);
+
+        // Fallback to a different Overpass API endpoint
+        const fallbackUrl = `https://lz4.overpass-api.de/api/interpreter?data=[out:json];node(${poiId});out;`;
+        try {
+            const response = await axios.get(fallbackUrl);
+            const result = response.data.elements[0];
+
+            return {
+                name: result.tags.name,
+                address: result.tags["addr:full"],
+                phone: result.tags.phone,
+                website: result.tags.website,
+                openingHours: result.tags.opening_hours,
+                rating: null, // OSM does not provide ratings
+                reviews: null, // OSM does not provide reviews
+                type: result.tags.amenity,
+            };
+        } catch (fallbackError) {
+            console.error("Error fetching OSM POI details from fallback endpoint:", fallbackError);
+            throw fallbackError;
+        }
     }
 };
 

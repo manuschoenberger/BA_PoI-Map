@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationObjectCoords } from "expo-location";
@@ -6,6 +6,7 @@ import { POI, Isochrone } from "./utils/apiServices";
 import { getColorByMode } from "@/app/utils/routeColorUtils";
 import { createGeoJSONCircle } from "@/app/utils/maxRadiusCircleUtils";
 import { getDistanceFromLatLonInKm } from "@/app/utils/distanceUtils";
+import { calculateIsochroneBounds } from "@/app/utils/isochroneBoundsUtils";
 
 const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
 
@@ -28,7 +29,9 @@ export default function MapBoxWebView({
                                           routeGeoJSON,
                                       }: MapBoxWebViewProps) {
     const webViewRef = useRef<WebView>(null);
-    const routePartsRef = useRef<any[]>([]);
+    const routePartsRef = useRef<{ id: string; color: string; data: any }[]>([]);
+    const [prevIsochroneSize, setPrevIsochroneSize] = useState<number | null>(null);
+    const [prevPOICount, setPrevPOICount] = useState<number>(0);
 
     const poiGeoJSON = {
         type: "FeatureCollection",
@@ -59,7 +62,6 @@ export default function MapBoxWebView({
 
                 if (outOfBounds !== isOutOfBounds) {
                     if (currentSegment.length > 0) {
-                        currentSegment.push(point);
                         if (isOutOfBounds) {
                             acc.outOfBoundsSegments.push(currentSegment);
                         } else {
@@ -146,7 +148,10 @@ export default function MapBoxWebView({
                         if (map.getSource('${part.id}')) {
                             map.getSource('${part.id}').setData(${JSON.stringify(part.data)});
                         } else {
-                            map.addSource('${part.id}', { type: 'geojson', data: ${JSON.stringify(part.data)} });
+                            map.addSource('${part.id}', {
+                                type: 'geojson',
+                                data: ${JSON.stringify(part.data)}
+                            });
                             map.addLayer({
                                 id: '${part.id}',
                                 type: 'line',
@@ -190,7 +195,6 @@ export default function MapBoxWebView({
         }
     };
 
-
     // Function to remove the route and mode icons from the map
     const removeRoute = () => {
         if (webViewRef.current && routePartsRef.current.length > 0) {
@@ -219,6 +223,31 @@ export default function MapBoxWebView({
 
     // Update map when data changes
     useEffect(() => {
+        const currentIsochroneSize = isochrone.coordinates.flat(2).length;
+        const currentPOICount = pois.length;
+
+        if (currentIsochroneSize !== prevIsochroneSize || currentPOICount !== prevPOICount) {
+            if (isochrone.coordinates.length > 0) {
+                const bounds = calculateIsochroneBounds(isochrone);
+                const fitBoundsScript = `
+                if (typeof map !== 'undefined' && map.isStyleLoaded()) {
+                    map.fitBounds([[${bounds[0]}, ${bounds[1]}], [${bounds[2]}, ${bounds[3]}]], {
+                        padding: { top: 50, right: 50, bottom: 50, left: 50 },
+                        animate: true
+                    });
+                }
+            `;
+
+                setTimeout(() => {
+                    webViewRef.current?.injectJavaScript(fitBoundsScript);
+                }, 500); // Small delay ensures the map is ready
+            }
+
+            // Update state AFTER executing fitBounds
+            setPrevIsochroneSize(currentIsochroneSize);
+            setPrevPOICount(currentPOICount);
+        }
+
         if (routeGeoJSON) {
             routePartsRef.current = routeGeoJSON.parts.map((part, index) => ({
                 id: `route-part-${index}`,
@@ -350,21 +379,66 @@ export default function MapBoxWebView({
                     }
                 });
 
-                // POIs
+                // POIs with clustering
                 map.addSource('pois', {
                     type: 'geojson',
-                    data: ${JSON.stringify(poiGeoJSON)}
+                    data: ${JSON.stringify(poiGeoJSON)},
+                    cluster: true,
+                    clusterMaxZoom: 14,
+                    clusterRadius: 30,
                 });
 
                 map.addLayer({
                     id: 'poisLayer',
                     type: 'circle',
                     source: 'pois',
+                    filter: ['!', ['has', 'point_count']],
                     paint: {
                         'circle-color': '#11b4da',
                         'circle-radius': 6,
                         'circle-stroke-width': 2,
                         'circle-stroke-color': '#fff',
+                    }
+                });
+
+                // Cluster layer
+                map.addLayer({
+                    id: 'clusters',
+                    type: 'circle',
+                    source: 'pois',
+                    filter: ['has', 'point_count'],
+                    paint: {
+                        'circle-color': [
+                            'step',
+                            ['get', 'point_count'],
+                            '#51bbd6',
+                            100,
+                            '#f1f075',
+                            750,
+                            '#f28cb1'
+                        ],
+                        'circle-radius': [
+                            'step',
+                            ['get', 'point_count'],
+                            20,
+                            100,
+                            30,
+                            750,
+                            40
+                        ]
+                    }
+                });
+
+                // Cluster count layer
+                map.addLayer({
+                    id: 'cluster-count',
+                    type: 'symbol',
+                    source: 'pois',
+                    filter: ['has', 'point_count'],
+                    layout: {
+                        'text-field': '{point_count_abbreviated}',
+                        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                        'text-size': 12
                     }
                 });
 

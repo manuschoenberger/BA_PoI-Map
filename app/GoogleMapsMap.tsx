@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { StyleSheet, View, Image } from "react-native";
 import MapView, { Polygon, Marker, Circle, Polyline, LatLng } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
@@ -26,6 +26,8 @@ export default function GoogleMapsMap({
                                           routeGeoJSON,
                                       }: MapProps) {
     const mapRef = useRef<MapView>(null);
+    const [prevIsochroneSize, setPrevIsochroneSize] = useState<number | null>(null);
+    const [prevPOICount, setPrevPOICount] = useState<number>(0);
 
     const { inBoundsSegments, outOfBoundsSegments } = isochrone.coordinates.reduce(
         (
@@ -73,13 +75,20 @@ export default function GoogleMapsMap({
     const isochroneCoordinates = isochrone.coordinates.flat(2).map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
 
     useEffect(() => {
-        if (isochroneCoordinates.length > 0) {
-            mapRef.current?.fitToCoordinates(isochroneCoordinates, {
-                edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-                animated: true,
-            });
+        const currentIsochroneSize = isochroneCoordinates.length;
+        const currentPOICount = pois.length;
+
+        if (currentIsochroneSize !== prevIsochroneSize || currentPOICount !== prevPOICount) {
+            if (isochroneCoordinates.length > 0) {
+                mapRef.current?.fitToCoordinates(isochroneCoordinates, {
+                    edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                    animated: true,
+                });
+            }
+            setPrevIsochroneSize(currentIsochroneSize);
+            setPrevPOICount(currentPOICount);
         }
-    }, [isochroneCoordinates]);
+    }, [isochroneCoordinates, pois]);
 
     return (
         <View style={styles.container}>

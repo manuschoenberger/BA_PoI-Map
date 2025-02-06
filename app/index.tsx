@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     SafeAreaView,
     Button,
+    ScrollView,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
@@ -24,6 +25,8 @@ import {
     Isochrone,
     fetchMapboxRoute,
     fetchTravelTimeRoute,
+    fetchGooglePOIDetails,
+    fetchOSMPOIDetails,
 } from "./utils/apiServices";
 
 type RouteGeoJSON = {
@@ -42,6 +45,8 @@ export default function Index() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedPOI, setSelectedPOI] = useState<POI | null>(null); // Selected POI for routing
     const [routeGeoJSON, setRouteGeoJSON] = useState<RouteGeoJSON | null>(null);
+    const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false); // State for details modal
+    const [poiDetails, setPoiDetails] = useState<any>(null); // State for PoI details
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -201,22 +206,37 @@ export default function Index() {
         setHasChanges(false); // Reset hasChanges when modal is closed
     };
 
+    const handleShowDetails = async () => {
+        if (!selectedPOI) return;
+
+        try {
+            let details;
+            if (dataSource === "google") {
+                details = await fetchGooglePOIDetails(selectedPOI.id);
+            } else {
+                details = await fetchOSMPOIDetails(selectedPOI.id);
+            }
+            setPoiDetails(details);
+            setIsDetailsModalVisible(true);
+        } catch (error) {
+            console.error("Error fetching PoI details:", error);
+        }
+    };
+
     const maxRadius = dataSource === "google" ? 50000 : 70000;
 
-    if (!location || errorMsg) {
-        return (
-            <View style={styles.loader}>
-                {errorMsg ? (
-                    <Text style={{ color: "red" }}>{errorMsg}</Text>
-                ) : (
-                    <>
-                        <ActivityIndicator size="large" color="#0000ff" />
-                        <Text>Fetching location...</Text>
-                    </>
-                )}
-            </View>
-        );
-    }
+    const normalizeOpeningHours = (openingHours: string | string[]): string[] => {
+        if (Array.isArray(openingHours)) {
+            return openingHours;
+        }
+
+        // Convert OSM format "Mo-Su 16:30-24:00" to an array of strings
+        const days = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+        const parts = openingHours.split(" ");
+        const timeRange = parts[1];
+
+        return days.map(day => `${day}: ${timeRange}`);
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -327,16 +347,65 @@ export default function Index() {
                 )
             )}
 
-            {/* Directions Button */}
+            {/* Directions and Show Details Buttons */}
             {selectedPOI && (
                 <View style={styles.buttonContainer}>
-                    {routeGeoJSON ? (
-                        <Button title="Clear Route" onPress={handleClearRoute} />
-                    ) : (
-                        <Button title="Directions" onPress={handleFetchRoute} />
-                    )}
+                    <Button
+                        title={routeGeoJSON ? "Clear Route" : "Directions"}
+                        onPress={routeGeoJSON ? handleClearRoute : handleFetchRoute}
+                    />
+                    <Button
+                        title="Show details"
+                        onPress={handleShowDetails}
+                    />
                 </View>
             )}
+
+            {/* Details Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isDetailsModalVisible}
+                onRequestClose={() => setIsDetailsModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>{poiDetails?.name}</Text>
+                        <ScrollView style={styles.scrollView}>
+                            {poiDetails ? (
+                                <View>
+                                    <Text style={styles.detailText}>Type: {poiDetails.type}</Text>
+                                    <Text style={styles.detailText}>Address: {poiDetails.address}</Text>
+                                    <Text style={styles.detailText}>Phone: {poiDetails.phone}</Text>
+                                    <Text style={styles.detailText}>Website: {poiDetails.website}</Text>
+                                    <Text style={styles.detailText}>Opening Hours:</Text>
+                                    {Array.isArray(poiDetails.openingHours) || typeof poiDetails.openingHours === 'string' ? (
+                                        normalizeOpeningHours(poiDetails.openingHours).map((hours: string, index: number) => (
+                                            <Text key={index} style={styles.openingHoursText}>{hours}</Text>
+                                        ))
+                                    ) : (
+                                        <Text style={styles.detailText}>No opening hours available</Text>
+                                    )}
+                                    <Text style={styles.detailText}>Rating: {poiDetails.rating}</Text>
+                                    <Text style={styles.detailText}>Reviews:</Text>
+                                    {Array.isArray(poiDetails.reviews) ? (
+                                        poiDetails.reviews.map((review: string, index: number) => (
+                                            <Text key={index} style={styles.reviewText}>"{review}"</Text>
+                                        ))
+                                    ) : (
+                                        <Text style={styles.detailText}>No reviews available</Text>
+                                    )}
+                                </View>
+                            ) : (
+                                <ActivityIndicator size="large" color="#0000ff" />
+                            )}
+                        </ScrollView>
+                        <Pressable onPress={() => setIsDetailsModalVisible(false)} style={styles.closeButton}>
+                            <Text style={styles.closeButtonText}>Close</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -375,6 +444,7 @@ const styles = StyleSheet.create({
     },
     modalContent: {
         width: 300,
+        maxHeight: "80%",
         backgroundColor: "white",
         borderRadius: 10,
         padding: 20,
@@ -404,10 +474,26 @@ const styles = StyleSheet.create({
         bottom: 10,
         left: 10,
         right: 10,
+        flexDirection: "row",
+        justifyContent: "space-between",
     },
     loader: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+    },
+    scrollView: {
+        maxHeight: "70%",
+    },
+    detailText: {
+        fontSize: 14,
+        marginVertical: 8,
+    },
+    openingHoursText: {
+        fontSize: 14,
+    },
+    reviewText: {
+        fontSize: 14,
+        marginVertical: 8,
     },
 });
