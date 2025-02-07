@@ -255,66 +255,77 @@ export default function Index() {
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Select Map</Text>
-                        {menuOptions.map((item) => (
-                            <Pressable
-                                key={item.label}
-                                onPress={() => {
-                                    setTempUseMapBox(item.value);
-                                    setHasChanges(true);
-                                }}
-                            >
-                                <Text style={styles.radioOption}>
-                                    {tempUseMapBox === item.value ? "◉" : "○"} {item.label}
-                                </Text>
-                            </Pressable>
-                        ))}
-                        <Text style={styles.modalTitle}>Select POI Source</Text>
-                        {poiOptions.map((item) => (
-                            <Pressable
-                                key={item.label}
-                                onPress={() => {
-                                    setTempDataSource(item.value as "google" | "osm");
-                                    setHasChanges(true);
-                                }}
-                            >
-                                <Text style={styles.radioOption}>
-                                    {tempDataSource === item.value ? "◉" : "○"} {item.label}
-                                </Text>
-                            </Pressable>
-                        ))}
-                        <Text style={styles.modalTitle}>Select Isochrone Time</Text>
-                        <View style={styles.pickerContainer}>
-                            <Picker
-                                selectedValue={tempSelectedTime}
-                                onValueChange={(value) => {
-                                    setTempSelectedTime(value);
-                                    setHasChanges(true);
-                                }}
-                                style={styles.picker}
-                            >
-                                {timeOptions.map((time) => (
-                                    <Picker.Item key={time} label={`${time} min`} value={time} />
+                        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+                            <View style={styles.section}>
+                                <Text style={styles.modalTitle}>Select Map</Text>
+                                {menuOptions.map((item) => (
+                                    <Pressable
+                                        key={item.label}
+                                        onPress={() => {
+                                            setTempUseMapBox(item.value);
+                                            setHasChanges(true);
+                                        }}
+                                    >
+                                        <Text style={styles.radioOption}>
+                                            {tempUseMapBox === item.value ? "◉" : "○"} {item.label}
+                                        </Text>
+                                    </Pressable>
                                 ))}
-                            </Picker>
-                        </View>
-                        <Text style={styles.modalTitle}>Select Travel Mode</Text>
-                        {modeOptions.map((item) => (
-                            <Pressable
-                                key={item.label}
-                                onPress={() => {
-                                    setTempTravelMode(item.value as typeof travelMode);
-                                    setHasChanges(true);
-                                }}
-                            >
-                                <Text style={styles.radioOption}>
-                                    {tempTravelMode === item.value ? "◉" : "○"} {item.label}
-                                </Text>
+                            </View>
+                            <View style={styles.section}>
+                                <Text style={styles.modalTitle}>Select POI Source</Text>
+                                {poiOptions.map((item) => (
+                                    <Pressable
+                                        key={item.label}
+                                        onPress={() => {
+                                            setTempDataSource(item.value as "google" | "osm");
+                                            setHasChanges(true);
+                                        }}
+                                    >
+                                        <Text style={styles.radioOption}>
+                                            {tempDataSource === item.value ? "◉" : "○"} {item.label}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                            <View style={styles.section}>
+                                <Text style={styles.modalTitle}>Select Isochrone Time</Text>
+                                <View style={styles.pickerContainer}>
+                                    <Picker
+                                        selectedValue={tempSelectedTime}
+                                        onValueChange={(value) => {
+                                            setTempSelectedTime(value);
+                                            setHasChanges(true);
+                                        }}
+                                        style={styles.picker}
+                                        itemStyle={styles.pickerItem}
+                                    >
+                                        {timeOptions.map((time) => (
+                                            <Picker.Item key={time} label={`${time} min`} value={time} />
+                                        ))}
+                                    </Picker>
+                                </View>
+                            </View>
+                            <View style={styles.section}>
+                                <Text style={styles.modalTitle}>Select Travel Mode</Text>
+                                {modeOptions.map((item) => (
+                                    <Pressable
+                                        key={item.label}
+                                        onPress={() => {
+                                            setTempTravelMode(item.value as typeof travelMode);
+                                            setHasChanges(true);
+                                        }}
+                                    >
+                                        <Text style={styles.radioOption}>
+                                            {tempTravelMode === item.value ? "◉" : "○"} {item.label}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                            <Pressable onPress={handleModalClose} style={styles.closeButton}>
+                                <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
                             </Pressable>
-                        ))}
-                        <Pressable onPress={handleModalClose} style={styles.closeButton}>
-                            <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
-                        </Pressable>
+                        </ScrollView>
                     </View>
                 </View>
             </Modal>
@@ -433,6 +444,9 @@ const styles = StyleSheet.create({
     },
     picker: {
         width: "100%",
+        height: 60,
+    },
+    pickerItem: {
         height: 50,
     },
     modalContainer: {
@@ -494,5 +508,19 @@ const styles = StyleSheet.create({
     reviewText: {
         fontSize: 14,
         marginVertical: 8,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    section: {
+        width: "100%",
+        padding: 10,
+        marginVertical: 10,
+        backgroundColor: "#f9f9f9",
+        borderRadius: 5,
+        borderWidth: 1,
+        borderColor: "#ddd",
     },
 });
