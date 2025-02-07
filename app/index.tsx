@@ -47,6 +47,9 @@ export default function Index() {
     const [routeGeoJSON, setRouteGeoJSON] = useState<RouteGeoJSON | null>(null);
     const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
     const [poiDetails, setPoiDetails] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+    const [isDataFetched, setIsDataFetched] = useState(false);
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -196,17 +199,48 @@ export default function Index() {
         setSelectedPOI(null);
     };
 
-    const handleModalClose = () => {
+    const handleModalClose = async () => {
+        setIsLoading(true);
         setUseMapBox(tempUseMapBox);
         setDataSource(tempDataSource);
         setSelectedTime(tempSelectedTime);
         setTravelMode(tempTravelMode);
+
+        // Fetch data based on the new settings
+        if (location) {
+            try {
+                let data: Isochrone;
+                if (travelMode === "public-transport") {
+                    data = await fetchTravelTimeIsochrone(location.latitude, location.longitude, tempSelectedTime);
+                } else {
+                    data = await fetchMapboxIsochrone(location.latitude, location.longitude, tempSelectedTime, tempTravelMode);
+                }
+                setIsochrone(data);
+
+                let poisData: POI[];
+                if (tempDataSource === "google") {
+                    poisData = await fetchGooglePOIs(location.latitude, location.longitude);
+                } else {
+                    poisData = await fetchOSMPOIs(location.latitude, location.longitude);
+                }
+
+                const filteredPOIs = filterPOIsWithinIsochrone(poisData, data);
+                setPois(filteredPOIs);
+                setIsDataFetched(true);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        setIsLoading(false);
         setIsModalVisible(false);
         setHasChanges(false); // Reset hasChanges when modal is closed
     };
 
     const handleShowDetails = async () => {
         if (!selectedPOI) return;
+
+        setIsDetailsLoading(true);
 
         try {
             let details;
@@ -219,6 +253,8 @@ export default function Index() {
             setIsDetailsModalVisible(true);
         } catch (error) {
             console.error("Error fetching PoI details:", error);
+        } finally {
+            setIsDetailsLoading(false);
         }
     };
 
@@ -323,7 +359,11 @@ export default function Index() {
                                 ))}
                             </View>
                             <Pressable onPress={handleModalClose} style={styles.closeButton}>
-                                <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
+                                {isLoading ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
+                                )}
                             </Pressable>
                         </ScrollView>
                     </View>
@@ -341,6 +381,7 @@ export default function Index() {
                         selectedPOI={selectedPOI}
                         setSelectedPOI={setSelectedPOI}
                         routeGeoJSON={routeGeoJSON}
+                        isDataFetched={isDataFetched}
                     />
                 )
             ) : (
@@ -353,6 +394,7 @@ export default function Index() {
                         selectedPOI={selectedPOI}
                         setSelectedPOI={setSelectedPOI}
                         routeGeoJSON={routeGeoJSON}
+                        isDataFetched={isDataFetched}
                     />
                 )
             )}
@@ -364,10 +406,13 @@ export default function Index() {
                         title={routeGeoJSON ? "Clear Route" : "Directions"}
                         onPress={routeGeoJSON ? handleClearRoute : handleFetchRoute}
                     />
-                    <Button
-                        title="Show details"
-                        onPress={handleShowDetails}
-                    />
+                    <Pressable onPress={handleShowDetails} style={styles.detailsButton} disabled={isDetailsLoading}>
+                        {isDetailsLoading ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.detailsButtonText}>Show Details</Text>
+                        )}
+                    </Pressable>
                 </View>
             )}
 
@@ -477,6 +522,7 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: "#007aff",
         borderRadius: 5,
+        alignItems: "center",
     },
     closeButtonText: {
         color: "white",
@@ -489,6 +535,7 @@ const styles = StyleSheet.create({
         right: 10,
         flexDirection: "row",
         justifyContent: "space-between",
+        alignItems: "center",
     },
     loader: {
         flex: 1,
@@ -522,5 +569,15 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         borderWidth: 1,
         borderColor: "#ddd",
+    },
+    detailsButton: {
+        padding: 10,
+        backgroundColor: "#007aff",
+        borderRadius: 5,
+        alignItems: "center",
+    },
+    detailsButtonText: {
+        color: "white",
+        fontSize: 16,
     },
 });

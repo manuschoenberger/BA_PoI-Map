@@ -15,6 +15,7 @@ interface MapProps {
     selectedPOI: POI | null;
     setSelectedPOI: (poi: POI | null) => void;
     routeGeoJSON: { parts: { mode: string; coords: { lat: number; lng: number }[] }[] } | null;
+    isDataFetched: boolean;
 }
 
 export default function GoogleMapsMap({
@@ -24,10 +25,9 @@ export default function GoogleMapsMap({
                                           maxRadius,
                                           setSelectedPOI,
                                           routeGeoJSON,
+                                          isDataFetched,
                                       }: MapProps) {
     const mapRef = useRef<MapView>(null);
-    const [prevIsochroneSize, setPrevIsochroneSize] = useState<number | null>(null);
-    const [prevPOICount, setPrevPOICount] = useState<number>(0);
 
     const { inBoundsSegments, outOfBoundsSegments } = isochrone.coordinates.reduce(
         (
@@ -72,23 +72,15 @@ export default function GoogleMapsMap({
         { inBoundsSegments: [], outOfBoundsSegments: [] }
     );
 
-    const isochroneCoordinates = isochrone.coordinates.flat(2).map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
-
     useEffect(() => {
-        const currentIsochroneSize = isochroneCoordinates.length;
-        const currentPOICount = pois.length;
-
-        if (currentIsochroneSize !== prevIsochroneSize || currentPOICount !== prevPOICount) {
-            if (isochroneCoordinates.length > 0) {
-                mapRef.current?.fitToCoordinates(isochroneCoordinates, {
-                    edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-                    animated: true,
-                });
-            }
-            setPrevIsochroneSize(currentIsochroneSize);
-            setPrevPOICount(currentPOICount);
+        if (isDataFetched && isochrone.coordinates.length > 0) {
+            const isochroneCoordinates = isochrone.coordinates.flat(2).map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
+            mapRef.current?.fitToCoordinates(isochroneCoordinates, {
+                edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                animated: true,
+            });
         }
-    }, [isochroneCoordinates, pois]);
+    }, [isDataFetched, isochrone]);
 
     return (
         <View style={styles.container}>

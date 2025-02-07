@@ -18,6 +18,7 @@ interface MapBoxWebViewProps {
     selectedPOI: POI | null;
     setSelectedPOI: (poi: POI | null) => void;
     routeGeoJSON: { parts: { mode: string; coords: { lat: number; lng: number }[] }[] } | null;
+    isDataFetched: boolean;
 }
 
 export default function MapBoxWebView({
@@ -27,11 +28,10 @@ export default function MapBoxWebView({
                                           maxRadius,
                                           setSelectedPOI,
                                           routeGeoJSON,
+                                          isDataFetched,
                                       }: MapBoxWebViewProps) {
     const webViewRef = useRef<WebView>(null);
     const routePartsRef = useRef<{ id: string; color: string; data: any }[]>([]);
-    const [prevIsochroneSize, setPrevIsochroneSize] = useState<number | null>(null);
-    const [prevPOICount, setPrevPOICount] = useState<number>(0);
 
     const poiGeoJSON = {
         type: "FeatureCollection",
@@ -222,13 +222,9 @@ export default function MapBoxWebView({
 
     // Update map when data changes
     useEffect(() => {
-        const currentIsochroneSize = isochrone.coordinates.flat(2).length;
-        const currentPOICount = pois.length;
-
-        if (currentIsochroneSize !== prevIsochroneSize || currentPOICount !== prevPOICount) {
-            if (isochrone.coordinates.length > 0) {
-                const bounds = calculateIsochroneBounds(isochrone);
-                const fitBoundsScript = `
+        if (isDataFetched && isochrone.coordinates.length > 0) {
+            const bounds = calculateIsochroneBounds(isochrone);
+            const fitBoundsScript = `
                 if (typeof map !== 'undefined' && map.isStyleLoaded()) {
                     map.fitBounds([[${bounds[0]}, ${bounds[1]}], [${bounds[2]}, ${bounds[3]}]], {
                         padding: { top: 50, right: 50, bottom: 50, left: 50 },
@@ -236,15 +232,9 @@ export default function MapBoxWebView({
                     });
                 }
             `;
-
-                setTimeout(() => {
-                    webViewRef.current?.injectJavaScript(fitBoundsScript);
-                }, 500); // Small delay ensures the map is ready
-            }
-
-            // Update state AFTER executing fitBounds
-            setPrevIsochroneSize(currentIsochroneSize);
-            setPrevPOICount(currentPOICount);
+            setTimeout(() => {
+                webViewRef.current?.injectJavaScript(fitBoundsScript);
+            }, 500); // Small delay ensures the map is ready
         }
 
         if (routeGeoJSON) {
@@ -263,7 +253,7 @@ export default function MapBoxWebView({
         } else {
             removeRoute();
         }
-    }, [isochrone, routeGeoJSON, pois]);
+    }, [isochrone, routeGeoJSON, pois, isDataFetched]);
 
     const html = `
     <!DOCTYPE html>
