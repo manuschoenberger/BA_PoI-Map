@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
         height: "100%",
     },
     icon: {
-        width: 30,  // Adjust as needed
+        width: 30,
         height: 30,
         resizeMode: "contain",
     },

@@ -40,13 +40,13 @@ export default function Index() {
     const [pois, setPois] = useState<POI[]>([]);
     const [dataSource, setDataSource] = useState<"google" | "osm">("google");
     const [isochrone, setIsochrone] = useState<Isochrone | null>(null);
-    const [selectedTime, setSelectedTime] = useState(10); // Default is 10 minutes
-    const [travelMode, setTravelMode] = useState<"driving" | "driving-traffic" | "walking" | "cycling" | "public-transport">("driving"); // Default is driving
+    const [selectedTime, setSelectedTime] = useState(10);
+    const [travelMode, setTravelMode] = useState<"driving" | "driving-traffic" | "walking" | "cycling" | "public-transport">("driving");
     const [isModalVisible, setIsModalVisible] = useState(false);
-    const [selectedPOI, setSelectedPOI] = useState<POI | null>(null); // Selected POI for routing
+    const [selectedPOI, setSelectedPOI] = useState<POI | null>(null);
     const [routeGeoJSON, setRouteGeoJSON] = useState<RouteGeoJSON | null>(null);
-    const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false); // State for details modal
-    const [poiDetails, setPoiDetails] = useState<any>(null); // State for PoI details
+    const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+    const [poiDetails, setPoiDetails] = useState<any>(null);
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -110,7 +110,7 @@ export default function Index() {
                 }
             };
 
-            const debounceFetch = setTimeout(fetchIsochroneData, 300); // Debounce for 300ms
+            const debounceFetch = setTimeout(fetchIsochroneData, 300);
             return () => clearTimeout(debounceFetch);
         }
     }, [location, selectedTime, travelMode]);
@@ -119,14 +119,13 @@ export default function Index() {
         if (location && isochrone) {
             const fetchData = async () => {
                 try {
-                    let data: POI[] = [];
+                    let data: POI[];
                     if (dataSource === "google") {
                         data = await fetchGooglePOIs(location.latitude, location.longitude);
                     } else {
                         data = await fetchOSMPOIs(location.latitude, location.longitude);
                     }
 
-                    // Filter POIs within the isochrone
                     const filteredPOIs = filterPOIsWithinIsochrone(data, isochrone);
                     setPois(filteredPOIs);
                 } catch (error) {
@@ -160,8 +159,8 @@ export default function Index() {
     ];
 
     const poiOptions = [
-        { label: "Google POI", value: "google" },
-        { label: "OSM POI", value: "osm" },
+        { label: "Google", value: "google" },
+        { label: "OpenStreetMap", value: "osm" },
     ];
 
     const modeOptions = [

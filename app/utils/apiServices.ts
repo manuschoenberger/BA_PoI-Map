@@ -1,5 +1,5 @@
 import axios from "axios";
-import { point, polygon, multiPolygon } from "@turf/helpers";
+import {multiPolygon, point} from "@turf/helpers";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
 // Define a common interface for POI data
@@ -53,9 +53,7 @@ export const fetchGooglePOIs = async (latitude: number, longitude: number): Prom
     );
 
     // Remove duplicate POIs by ID
-    const uniquePOIs = Array.from(new Map(pois.map((poi) => [poi.id, poi])).values());
-
-    return uniquePOIs;
+    return Array.from(new Map(pois.map((poi) => [poi.id, poi])).values());
 };
 
 // Fetch POIs from OpenStreetMap

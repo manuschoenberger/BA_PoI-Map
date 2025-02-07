@@ -114,13 +114,13 @@ export default function MapBoxWebView({
     const modeIconsGeoJSON = {
         type: "FeatureCollection",
         features: routeGeoJSON
-            ? routeGeoJSON.parts.map((part, index) => ({
+            ? routeGeoJSON.parts.map((part) => ({
                 type: "Feature",
                 properties: { icon: transportModeIcons[part.mode] || "marker" },
                 geometry: {
                     type: "Point",
                     coordinates: [
-                        part.coords[0].lng, // First point of the section
+                        part.coords[0].lng,
                         part.coords[0].lat,
                     ],
                 },
@@ -180,7 +180,6 @@ export default function MapBoxWebView({
                 });
             }
 
-            // Add mode icons AFTER route lines, so they appear on top
             map.addLayer({
                 id: 'modeIconsLayer',
                 type: 'symbol',
@@ -314,13 +313,13 @@ export default function MapBoxWebView({
                     data: {
                         type: 'FeatureCollection',
                         features: ${JSON.stringify(inBoundsSegments.map(segment => ({
-        type: 'Feature',
-        geometry: {
-            type: 'LineString',
-            coordinates: segment,
-        },
-        properties: {},
-    })))},
+                            type: 'Feature',
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: segment,
+                            },
+                            properties: {},
+                        })))},
                     }
                 });
 
@@ -341,13 +340,13 @@ export default function MapBoxWebView({
                     data: {
                         type: 'FeatureCollection',
                         features: ${JSON.stringify(outOfBoundsSegments.map(segment => ({
-        type: 'Feature',
-        geometry: {
-            type: 'LineString',
-            coordinates: segment,
-        },
-        properties: {},
-    })))},
+                            type: 'Feature',
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: segment,
+                            },
+                            properties: {},
+                        })))},
                     }
                 });
 
@@ -362,7 +361,7 @@ export default function MapBoxWebView({
                     }
                 });
 
-                // Max radius
+                // Max radius circle
                 map.addSource('maxRadius', {
                     type: 'geojson',
                     data: ${JSON.stringify(maxRadiusGeoJSON)}
