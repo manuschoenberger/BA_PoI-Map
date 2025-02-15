@@ -49,6 +49,7 @@ export const fetchGooglePOIs = async (latitude: number, longitude: number): Prom
             name: result.name,
             latitude: result.geometry.location.lat,
             longitude: result.geometry.location.lng,
+            type: result.types[0],
         }))
     );
 
@@ -88,6 +89,7 @@ export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise
                 name: element.tags.name,
                 latitude: element.lat,
                 longitude: element.lon,
+                type: element.tags.amenity || element.tags.tourism,
             }));
     } catch (error) {
         console.error("Error fetching OSM POIs:", error);

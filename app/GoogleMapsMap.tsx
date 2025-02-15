@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import { StyleSheet, View, Image } from "react-native";
 import MapView, { Polygon, Marker, Circle, Polyline, LatLng } from "react-native-maps";
 import { LocationObjectCoords } from "expo-location";
@@ -6,6 +6,7 @@ import { POI, Isochrone } from "./utils/apiServices";
 import { getDistanceFromLatLonInKm } from "./utils/distanceUtils";
 import { getColorByMode } from "@/app/utils/routeColorUtils";
 import { transportModeIcons } from "@/app/utils/modeIcons";
+import { POI_ICONS } from "@/app/utils/poiIcons";
 
 interface MapProps {
     location: LocationObjectCoords;
@@ -82,6 +83,14 @@ export default function GoogleMapsMap({
         }
     }, [isDataFetched, isochrone]);
 
+    const customMapStyle = [
+        {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }],
+        },
+    ];
+
     return (
         <View style={styles.container}>
             <MapView
@@ -93,19 +102,28 @@ export default function GoogleMapsMap({
                     latitudeDelta: 0.05,
                     longitudeDelta: 0.05,
                 }}
+                customMapStyle={customMapStyle}
                 showsUserLocation={true}
                 userLocationUpdateInterval={30000}
                 onPress={() => setSelectedPOI(null)} // Deselect POI when clicking outside
             >
                 {/* Display POI markers */}
-                {pois.map((poi) => (
-                    <Marker
-                        key={poi.id}
-                        coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
-                        title={poi.name}
-                        onPress={() => setSelectedPOI(poi)} // Notify parent on POI click
-                    />
-                ))}
+                {pois.map((poi) => {
+                    const iconSource = poi.type ? POI_ICONS[poi.type] || POI_ICONS.default : POI_ICONS.default;                    return (
+                        <Marker
+                            key={poi.id}
+                            coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
+                            title={poi.name}
+                            onPress={() => setSelectedPOI(poi)} // Notify parent on POI click
+                            anchor={{ x: 0.5, y: 0.5 }}
+                        >
+                            <Image
+                                source={{ uri: iconSource }}
+                                style={{ width: 24, height: 24, resizeMode: "contain" }}
+                            />
+                        </Marker>
+                    );
+                })}
 
                 {/* Display Isochrone in-bounds segments */}
                 {inBoundsSegments.map((segment, index) => (
@@ -193,8 +211,8 @@ const styles = StyleSheet.create({
         height: "100%",
     },
     icon: {
-        width: 30,
-        height: 30,
+        width: 20,
+        height: 20,
         resizeMode: "contain",
     },
 });

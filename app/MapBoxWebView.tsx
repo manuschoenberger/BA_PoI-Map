@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationObjectCoords } from "expo-location";
@@ -7,6 +7,7 @@ import { getColorByMode } from "@/app/utils/routeColorUtils";
 import { createGeoJSONCircle } from "@/app/utils/maxRadiusCircleUtils";
 import { getDistanceFromLatLonInKm } from "@/app/utils/distanceUtils";
 import { calculateIsochroneBounds } from "@/app/utils/isochroneBoundsUtils";
+import { POI_ICONS } from "@/app/utils/poiIcons";
 
 const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
 
@@ -37,7 +38,11 @@ export default function MapBoxWebView({
         type: "FeatureCollection",
         features: pois.map((poi) => ({
             type: "Feature",
-            properties: { title: poi.name, id: poi.id },
+            properties: {
+                title: poi.name,
+                id: poi.id,
+                icon: poi.type && poi.type in POI_ICONS ? poi.type : "default" // Assign icon based on POI type
+            },
             geometry: {
                 type: "Point",
                 coordinates: [poi.longitude, poi.latitude],
@@ -278,8 +283,9 @@ export default function MapBoxWebView({
                 center: [${location.longitude}, ${location.latitude}],
                 zoom: 12
             });
+            
+            const poiIcons = ${JSON.stringify(POI_ICONS)};
 
-            // Add isochrone
             map.on('load', () => {
                 map.addSource('isoFill', {
                     type: 'geojson',
@@ -367,6 +373,14 @@ export default function MapBoxWebView({
                         'line-width': 2,
                     }
                 });
+                
+                Object.entries(poiIcons).forEach(([type, dataUrl]) => {
+                    map.loadImage(dataUrl, (error, image) => {
+                        if (!error && !map.hasImage(type)) {
+                            map.addImage(type, image);
+                        }
+                    });
+                });
 
                 // POIs with clustering
                 map.addSource('pois', {
@@ -374,19 +388,18 @@ export default function MapBoxWebView({
                     data: ${JSON.stringify(poiGeoJSON)},
                     cluster: true,
                     clusterMaxZoom: 14,
-                    clusterRadius: 30,
+                    clusterRadius: 50,
                 });
 
                 map.addLayer({
                     id: 'poisLayer',
-                    type: 'circle',
+                    type: 'symbol',
                     source: 'pois',
                     filter: ['!', ['has', 'point_count']],
-                    paint: {
-                        'circle-color': '#11b4da',
-                        'circle-radius': 6,
-                        'circle-stroke-width': 2,
-                        'circle-stroke-color': '#fff',
+                    layout: {
+                        'icon-image': ['get', 'icon'],
+                        'icon-size': 1,
+                        'icon-anchor': 'bottom'
                     }
                 });
 
@@ -464,7 +477,7 @@ export default function MapBoxWebView({
                         JSON.stringify({ type: 'SELECT_POI', data: { id, title, coordinates } })
                     );
 
-                    new mapboxgl.Popup()
+                    new mapboxgl.Popup({ offset: 25, anchor: 'bottom' })
                         .setLngLat(coordinates)
                         .setHTML(\`<strong>\${title}</strong>\`)
                         .addTo(map);
