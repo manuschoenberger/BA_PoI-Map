@@ -8,7 +8,6 @@ import {
     Pressable,
     TouchableOpacity,
     SafeAreaView,
-    Button,
     ScrollView,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
@@ -50,6 +49,7 @@ export default function Index() {
     const [isLoading, setIsLoading] = useState(false);
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
     const [isDataFetched, setIsDataFetched] = useState(false);
+    const [isRouteLoading, setIsRouteLoading] = useState(false); // New state variable
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -177,6 +177,8 @@ export default function Index() {
     const handleFetchRoute = async () => {
         if (!selectedPOI || !location) return;
 
+        setIsRouteLoading(true);
+
         const start: [number, number] = [location.longitude, location.latitude];
         const end: [number, number] = [selectedPOI.longitude, selectedPOI.latitude];
 
@@ -190,6 +192,8 @@ export default function Index() {
             setRouteGeoJSON({ parts: route.parts });
         } catch (error) {
             console.error("Error fetching route:", error);
+        } finally {
+            setIsRouteLoading(false);
         }
     };
 
@@ -402,10 +406,13 @@ export default function Index() {
             {/* Directions and Show Details Buttons */}
             {selectedPOI && (
                 <View style={styles.buttonContainer}>
-                    <Button
-                        title={routeGeoJSON ? "Clear Route" : "Directions"}
-                        onPress={routeGeoJSON ? handleClearRoute : handleFetchRoute}
-                    />
+                    <Pressable onPress={routeGeoJSON ? handleClearRoute : handleFetchRoute} style={styles.detailsButton} disabled={isRouteLoading}>
+                        {isRouteLoading ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.detailsButtonText}>{routeGeoJSON ? "Clear Route" : "Directions"}</Text>
+                        )}
+                    </Pressable>
                     <Pressable onPress={handleShowDetails} style={styles.detailsButton} disabled={isDetailsLoading}>
                         {isDetailsLoading ? (
                             <ActivityIndicator size="small" color="#fff" />
