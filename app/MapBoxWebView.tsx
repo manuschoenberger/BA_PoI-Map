@@ -398,7 +398,7 @@ export default function MapBoxWebView({
                     filter: ['!', ['has', 'point_count']],
                     layout: {
                         'icon-image': ['get', 'icon'],
-                        'icon-size': 1,
+                        'icon-size': 0.5,
                         'icon-anchor': 'bottom'
                     }
                 });
@@ -414,9 +414,9 @@ export default function MapBoxWebView({
                             'step',
                             ['get', 'point_count'],
                             '#51bbd6',
-                            100,
+                            50,
                             '#f1f075',
-                            750,
+                            100,
                             '#f28cb1'
                         ],
                         'circle-radius': [

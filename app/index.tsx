@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     SafeAreaView,
     ScrollView,
+    Image,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
@@ -27,6 +28,7 @@ import {
     fetchGooglePOIDetails,
     fetchOSMPOIDetails,
 } from "./utils/apiServices";
+import { BUTTON_ICONS } from './utils/buttonIcons';
 
 type RouteGeoJSON = {
     parts: { mode: string; coords: { lat: number; lng: number }[] }[];
@@ -410,14 +412,14 @@ export default function Index() {
                         {isRouteLoading ? (
                             <ActivityIndicator size="small" color="#fff" />
                         ) : (
-                            <Text style={styles.detailsButtonText}>{routeGeoJSON ? "Clear Route" : "Directions"}</Text>
+                            <Image source={{ uri: routeGeoJSON ? BUTTON_ICONS.clearRoute : BUTTON_ICONS.directions }} style={styles.icon} />
                         )}
                     </Pressable>
                     <Pressable onPress={handleShowDetails} style={styles.detailsButton} disabled={isDetailsLoading}>
                         {isDetailsLoading ? (
                             <ActivityIndicator size="small" color="#fff" />
                         ) : (
-                            <Text style={styles.detailsButtonText}>Show Details</Text>
+                            <Image source={{ uri: BUTTON_ICONS.showDetails }} style={styles.icon} />
                         )}
                     </Pressable>
                 </View>
@@ -537,9 +539,9 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         position: "absolute",
-        bottom: 10,
-        left: 10,
-        right: 10,
+        bottom: 40,
+        left: 20,
+        right: 20,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
@@ -578,13 +580,19 @@ const styles = StyleSheet.create({
         borderColor: "#ddd",
     },
     detailsButton: {
-        padding: 10,
-        backgroundColor: "#007aff",
-        borderRadius: 5,
+        width: 60,
+        height: 60,
+        backgroundColor: "#51bbd6",
+        borderRadius: 30,
         alignItems: "center",
+        justifyContent: "center",
     },
     detailsButtonText: {
         color: "white",
         fontSize: 16,
+    },
+    icon: {
+        width: 30,
+        height: 30,
     },
 });
