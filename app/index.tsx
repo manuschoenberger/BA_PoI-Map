@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from "react";
 import {
     View,
-    StyleSheet,
     Text,
     ActivityIndicator,
-    Modal,
-    Pressable,
     TouchableOpacity,
     SafeAreaView,
-    ScrollView,
-    Image,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import OptionsMenu from "@/app/OptionsMenu";
+import DetailsModal from "./DetailsModal";
 import * as Location from "expo-location";
 import MapBoxWebView from "./MapBoxWebView";
 import GoogleMapsMap from "./GoogleMapsMap";
+import PoiOptions from "@/app/PoiOptions";
 import {
     POI,
     fetchGooglePOIs,
@@ -28,7 +25,7 @@ import {
     fetchGooglePOIDetails,
     fetchOSMPOIDetails,
 } from "./utils/apiServices";
-import { BUTTON_ICONS } from './utils/buttonIcons';
+import indexStyles from "@/app/utils/styles/indexStyles";
 
 type RouteGeoJSON = {
     parts: { mode: string; coords: { lat: number; lng: number }[] }[];
@@ -51,13 +48,13 @@ export default function Index() {
     const [isLoading, setIsLoading] = useState(false);
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
     const [isDataFetched, setIsDataFetched] = useState(false);
-    const [isRouteLoading, setIsRouteLoading] = useState(false); // New state variable
+    const [isRouteLoading, setIsRouteLoading] = useState(false);
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
     const [tempDataSource, setTempDataSource] = useState(dataSource);
     const [tempSelectedTime, setTempSelectedTime] = useState(selectedTime);
-    const [tempTravelMode, setTempTravelMode] = useState(travelMode);
+    const [tempTravelMode, setTempTravelMode] = useState<"driving" | "driving-traffic" | "walking" | "cycling" | "public-transport">("driving");
 
     // State variable to track if changes have been made
     const [hasChanges, setHasChanges] = useState(false);
@@ -137,13 +134,14 @@ export default function Index() {
                     console.error("Error fetching POIs:", error);
                 }
             };
+
             fetchData();
         }
     }, [location, isochrone, dataSource]);
 
     if (!location && !errorMsg) {
         return (
-            <View style={styles.loader}>
+            <View style={indexStyles.loader}>
                 <ActivityIndicator size="large" color="#0000ff" />
                 <Text>Fetching location...</Text>
             </View>
@@ -152,7 +150,7 @@ export default function Index() {
 
     if (errorMsg) {
         return (
-            <View style={styles.loader}>
+            <View style={indexStyles.loader}>
                 <Text style={{ color: "red" }}>{errorMsg}</Text>
             </View>
         );
@@ -163,12 +161,12 @@ export default function Index() {
         { label: "Google Maps", value: false },
     ];
 
-    const poiOptions = [
+    const poiOptions: { label: string; value: "google" | "osm" }[] = [
         { label: "Google", value: "google" },
         { label: "OpenStreetMap", value: "osm" },
     ];
 
-    const modeOptions = [
+    const modeOptions: { label: string; value: "driving" | "driving-traffic" | "walking" | "cycling" | "public-transport" }[] = [
         { label: "Driving", value: "driving" },
         { label: "Driving (Traffic)", value: "driving-traffic" },
         { label: "Walking", value: "walking" },
@@ -280,101 +278,34 @@ export default function Index() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={indexStyles.container}>
             {/* Menu Bar */}
-            <View style={styles.menuBar}>
+            <View style={indexStyles.menuBar}>
                 <TouchableOpacity onPress={() => setIsModalVisible(true)}>
-                    <Text style={styles.menuButton}>☰</Text>
+                    <Text style={indexStyles.menuButton}>☰</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={isModalVisible}
-                onRequestClose={() => setIsModalVisible(false)}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <ScrollView contentContainerStyle={styles.scrollViewContent}>
-                            <View style={styles.section}>
-                                <Text style={styles.modalTitle}>Select Map</Text>
-                                {menuOptions.map((item) => (
-                                    <Pressable
-                                        key={item.label}
-                                        onPress={() => {
-                                            setTempUseMapBox(item.value);
-                                            setHasChanges(true);
-                                        }}
-                                    >
-                                        <Text style={styles.radioOption}>
-                                            {tempUseMapBox === item.value ? "◉" : "○"} {item.label}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                            <View style={styles.section}>
-                                <Text style={styles.modalTitle}>Select POI Source</Text>
-                                {poiOptions.map((item) => (
-                                    <Pressable
-                                        key={item.label}
-                                        onPress={() => {
-                                            setTempDataSource(item.value as "google" | "osm");
-                                            setHasChanges(true);
-                                        }}
-                                    >
-                                        <Text style={styles.radioOption}>
-                                            {tempDataSource === item.value ? "◉" : "○"} {item.label}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                            <View style={styles.section}>
-                                <Text style={styles.modalTitle}>Select Isochrone Time</Text>
-                                <View style={styles.pickerContainer}>
-                                    <Picker
-                                        selectedValue={tempSelectedTime}
-                                        onValueChange={(value) => {
-                                            setTempSelectedTime(value);
-                                            setHasChanges(true);
-                                        }}
-                                        style={styles.picker}
-                                        itemStyle={styles.pickerItem}
-                                    >
-                                        {timeOptions.map((time) => (
-                                            <Picker.Item key={time} label={`${time} min`} value={time} />
-                                        ))}
-                                    </Picker>
-                                </View>
-                            </View>
-                            <View style={styles.section}>
-                                <Text style={styles.modalTitle}>Select Travel Mode</Text>
-                                {modeOptions.map((item) => (
-                                    <Pressable
-                                        key={item.label}
-                                        onPress={() => {
-                                            setTempTravelMode(item.value as typeof travelMode);
-                                            setHasChanges(true);
-                                        }}
-                                    >
-                                        <Text style={styles.radioOption}>
-                                            {tempTravelMode === item.value ? "◉" : "○"} {item.label}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                            <Pressable onPress={handleModalClose} style={styles.closeButton}>
-                                {isLoading ? (
-                                    <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                    <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
-                                )}
-                            </Pressable>
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
+            <OptionsMenu
+                isModalVisible={isModalVisible}
+                setIsModalVisible={setIsModalVisible}
+                tempUseMapBox={tempUseMapBox}
+                setTempUseMapBox={setTempUseMapBox}
+                tempDataSource={tempDataSource}
+                setTempDataSource={setTempDataSource}
+                tempSelectedTime={tempSelectedTime}
+                setTempSelectedTime={setTempSelectedTime}
+                tempTravelMode={tempTravelMode}
+                setTempTravelMode={setTempTravelMode}
+                handleModalClose={handleModalClose}
+                isLoading={isLoading}
+                hasChanges={hasChanges}
+                setHasChanges={setHasChanges}
+                timeOptions={timeOptions}
+                menuOptions={menuOptions}
+                poiOptions={poiOptions}
+                modeOptions={modeOptions}
+            />
 
             {/* Map Display */}
             {useMapBox ? (
@@ -405,194 +336,23 @@ export default function Index() {
                 )
             )}
 
-            {/* Directions and Show Details Buttons */}
             {selectedPOI && (
-                <View style={styles.buttonContainer}>
-                    <Pressable onPress={routeGeoJSON ? handleClearRoute : handleFetchRoute} style={styles.detailsButton} disabled={isRouteLoading}>
-                        {isRouteLoading ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                            <Image source={{ uri: routeGeoJSON ? BUTTON_ICONS.clearRoute : BUTTON_ICONS.directions }} style={styles.icon} />
-                        )}
-                    </Pressable>
-                    <Pressable onPress={handleShowDetails} style={styles.detailsButton} disabled={isDetailsLoading}>
-                        {isDetailsLoading ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                            <Image source={{ uri: BUTTON_ICONS.showDetails }} style={styles.icon} />
-                        )}
-                    </Pressable>
-                </View>
+                <PoiOptions
+                    routeGeoJSON={routeGeoJSON}
+                    handleClearRoute={handleClearRoute}
+                    handleFetchRoute={handleFetchRoute}
+                    isRouteLoading={isRouteLoading}
+                    handleShowDetails={handleShowDetails}
+                    isDetailsLoading={isDetailsLoading}
+                />
             )}
 
-            {/* Details Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={isDetailsModalVisible}
-                onRequestClose={() => setIsDetailsModalVisible(false)}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>{poiDetails?.name}</Text>
-                        <ScrollView style={styles.scrollView}>
-                            {poiDetails ? (
-                                <View>
-                                    <Text style={styles.detailText}>Type: {poiDetails.type}</Text>
-                                    <Text style={styles.detailText}>Address: {poiDetails.address}</Text>
-                                    <Text style={styles.detailText}>Phone: {poiDetails.phone}</Text>
-                                    <Text style={styles.detailText}>Website: {poiDetails.website}</Text>
-                                    <Text style={styles.detailText}>Opening Hours:</Text>
-                                    {Array.isArray(poiDetails.openingHours) || typeof poiDetails.openingHours === 'string' ? (
-                                        normalizeOpeningHours(poiDetails.openingHours).map((hours: string, index: number) => (
-                                            <Text key={index} style={styles.openingHoursText}>{hours}</Text>
-                                        ))
-                                    ) : (
-                                        <Text style={styles.detailText}>No opening hours available</Text>
-                                    )}
-                                    <Text style={styles.detailText}>Rating: {poiDetails.rating}</Text>
-                                    <Text style={styles.detailText}>Reviews:</Text>
-                                    {Array.isArray(poiDetails.reviews) ? (
-                                        poiDetails.reviews.map((review: string, index: number) => (
-                                            <Text key={index} style={styles.reviewText}>"{review}"</Text>
-                                        ))
-                                    ) : (
-                                        <Text style={styles.detailText}>No reviews available</Text>
-                                    )}
-                                </View>
-                            ) : (
-                                <ActivityIndicator size="large" color="#0000ff" />
-                            )}
-                        </ScrollView>
-                        <Pressable onPress={() => setIsDetailsModalVisible(false)} style={styles.closeButton}>
-                            <Text style={styles.closeButtonText}>Close</Text>
-                        </Pressable>
-                    </View>
-                </View>
-            </Modal>
+            <DetailsModal
+                isDetailsModalVisible={isDetailsModalVisible}
+                setIsDetailsModalVisible={setIsDetailsModalVisible}
+                poiDetails={poiDetails}
+                normalizeOpeningHours={normalizeOpeningHours}
+            />
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    menuBar: {
-        backgroundColor: "#007aff",
-        height: 50,
-        justifyContent: "center",
-        paddingHorizontal: 16,
-    },
-    menuButton: {
-        color: "white",
-        fontSize: 18,
-    },
-    pickerContainer: {
-        width: "100%",
-        borderWidth: 1,
-        borderColor: "#ddd",
-        borderRadius: 5,
-        marginVertical: 10,
-        backgroundColor: "#fff",
-    },
-    picker: {
-        width: "100%",
-        height: 60,
-    },
-    pickerItem: {
-        height: 50,
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-    },
-    modalContent: {
-        width: 300,
-        maxHeight: "80%",
-        backgroundColor: "white",
-        borderRadius: 10,
-        padding: 20,
-        alignItems: "center",
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 10,
-    },
-    radioOption: {
-        fontSize: 16,
-        marginVertical: 8,
-    },
-    closeButton: {
-        marginTop: 20,
-        padding: 10,
-        backgroundColor: "#007aff",
-        borderRadius: 5,
-        alignItems: "center",
-    },
-    closeButtonText: {
-        color: "white",
-        fontSize: 16,
-    },
-    buttonContainer: {
-        position: "absolute",
-        bottom: 40,
-        left: 20,
-        right: 20,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-    loader: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    scrollView: {
-        maxHeight: "70%",
-    },
-    detailText: {
-        fontSize: 14,
-        marginVertical: 8,
-    },
-    openingHoursText: {
-        fontSize: 14,
-    },
-    reviewText: {
-        fontSize: 14,
-        marginVertical: 8,
-    },
-    scrollViewContent: {
-        flexGrow: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    section: {
-        width: "100%",
-        padding: 10,
-        marginVertical: 10,
-        backgroundColor: "#f9f9f9",
-        borderRadius: 5,
-        borderWidth: 1,
-        borderColor: "#ddd",
-    },
-    detailsButton: {
-        width: 60,
-        height: 60,
-        backgroundColor: "#51bbd6",
-        borderRadius: 30,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    detailsButtonText: {
-        color: "white",
-        fontSize: 16,
-    },
-    icon: {
-        width: 30,
-        height: 30,
-    },
-});

@@ -427,7 +427,9 @@ export default function MapBoxWebView({
                             30,
                             750,
                             40
-                        ]
+                        ],
+                        'circle-stroke-width': 2, 
+                        'circle-stroke-color': '#ffffff' 
                     }
                 });
 
