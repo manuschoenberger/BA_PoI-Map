@@ -50,6 +50,7 @@ export default function Index() {
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
     const [isDataFetched, setIsDataFetched] = useState(false);
     const [isRouteLoading, setIsRouteLoading] = useState(false);
+    const [shouldFitToRoute, setShouldFitToRoute] = useState(false);
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -180,6 +181,7 @@ export default function Index() {
         if (!selectedPOI || !location) return;
 
         setIsRouteLoading(true);
+        setShouldFitToRoute(true);
 
         const start: [number, number] = [location.longitude, location.latitude];
         const end: [number, number] = [selectedPOI.longitude, selectedPOI.latitude];
@@ -224,6 +226,7 @@ export default function Index() {
     const handleClearRoute = () => {
         setRouteGeoJSON(null);
         setSelectedPOI(null);
+        setShouldFitToRoute(true);
     };
 
     const handleModalClose = async () => {
@@ -343,6 +346,8 @@ export default function Index() {
                         routeGeoJSON={routeGeoJSON}
                         isDataFetched={isDataFetched}
                         webViewRef={webViewRef}
+                        shouldFitToRoute={shouldFitToRoute}
+                        setShouldFitToRoute={setShouldFitToRoute}
                     />
                 )
             ) : (

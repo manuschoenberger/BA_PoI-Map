@@ -21,6 +21,8 @@ interface MapBoxWebViewProps {
     routeGeoJSON: { parts: { mode: string; coords: { lat: number; lng: number }[] }[] } | null;
     isDataFetched: boolean;
     webViewRef: React.RefObject<WebView>;
+    shouldFitToRoute: boolean;
+    setShouldFitToRoute: (value: boolean) => void;
 }
 
 export default function MapBoxWebView({
@@ -32,6 +34,8 @@ export default function MapBoxWebView({
                                           routeGeoJSON,
                                           isDataFetched,
                                           webViewRef,
+                                          shouldFitToRoute,
+                                          setShouldFitToRoute,
                                       }: MapBoxWebViewProps) {
     const routePartsRef = useRef<{ id: string; color: string; data: any }[]>([]);
 
@@ -238,9 +242,11 @@ export default function MapBoxWebView({
                     });
                 }
             `;
-            setTimeout(() => {
-                webViewRef.current?.injectJavaScript(fitBoundsScript);
-            }, 500); // Small delay ensures the map is ready
+            if (!shouldFitToRoute) {
+                setTimeout(() => {
+                    webViewRef.current?.injectJavaScript(fitBoundsScript);
+                }, 500); // Small delay ensures the map is ready
+            }
         }
 
         if (routeGeoJSON) {
@@ -258,6 +264,11 @@ export default function MapBoxWebView({
             updateMap();
         } else {
             removeRoute();
+        }
+
+        // Reset the state variable after fitting the route
+        if (shouldFitToRoute) {
+            setShouldFitToRoute(false);
         }
     }, [isochrone, routeGeoJSON, pois, isDataFetched]);
 
