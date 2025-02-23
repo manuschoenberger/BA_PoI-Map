@@ -20,6 +20,7 @@ interface MapBoxWebViewProps {
     setSelectedPOI: (poi: POI | null) => void;
     routeGeoJSON: { parts: { mode: string; coords: { lat: number; lng: number }[] }[] } | null;
     isDataFetched: boolean;
+    webViewRef: React.RefObject<WebView>;
 }
 
 export default function MapBoxWebView({
@@ -30,8 +31,8 @@ export default function MapBoxWebView({
                                           setSelectedPOI,
                                           routeGeoJSON,
                                           isDataFetched,
+                                          webViewRef,
                                       }: MapBoxWebViewProps) {
-    const webViewRef = useRef<WebView>(null);
     const routePartsRef = useRef<{ id: string; color: string; data: any }[]>([]);
 
     const poiGeoJSON = {

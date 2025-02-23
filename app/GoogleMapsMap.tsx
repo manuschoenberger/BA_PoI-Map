@@ -81,7 +81,15 @@ export default function GoogleMapsMap({
                 animated: true,
             });
         }
-    }, [isDataFetched, isochrone]);
+
+        if (routeGeoJSON) {
+            const routeCoordinates = routeGeoJSON.parts.flatMap(part => part.coords.map(coord => ({ latitude: coord.lat, longitude: coord.lng })));
+            mapRef.current?.fitToCoordinates(routeCoordinates, {
+                edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                animated: true,
+            });
+        }
+    }, [isDataFetched, isochrone, routeGeoJSON]);
 
     const customMapStyle = [
         {

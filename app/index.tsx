@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {
     View,
     Text,
@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     SafeAreaView,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import OptionsMenu from "@/app/OptionsMenu";
 import DetailsModal from "./DetailsModal";
 import * as Location from "expo-location";
@@ -71,6 +72,7 @@ export default function Index() {
         "public-transport": { times: [30, 60, 120, 180], defaultTime: 30 },
     };
 
+    const webViewRef = useRef<WebView>(null);
     const timeOptions = timeOptionsMap[tempTravelMode].times;
 
     // Update selected time when travel mode changes
@@ -190,6 +192,27 @@ export default function Index() {
                 route = await fetchMapboxRoute(start, end, travelMode);
             }
             setRouteGeoJSON({ parts: route.parts });
+
+            // Calculate the bounds of the route
+            const coordinates = route.parts.flatMap(part => part.coords.map(coord => [coord.lng, coord.lat]));
+            const bounds = coordinates.reduce((b, coord) => {
+                return [
+                    [Math.min(b[0][0], coord[0]), Math.min(b[0][1], coord[1])],
+                    [Math.max(b[1][0], coord[0]), Math.max(b[1][1], coord[1])]
+                ];
+            }, [coordinates[0], coordinates[0]]);
+
+            // Fit the map to the route bounds
+            if (webViewRef.current) {
+                webViewRef.current.injectJavaScript(`
+                    if (typeof map !== 'undefined' && map.isStyleLoaded()) {
+                        map.fitBounds([${bounds[0]}, ${bounds[1]}], {
+                            padding: { top: 50, right: 50, bottom: 50, left: 50 },
+                            animate: true
+                        });
+                    }
+                `);
+            }
         } catch (error) {
             console.error("Error fetching route:", error);
         } finally {
@@ -319,6 +342,7 @@ export default function Index() {
                         setSelectedPOI={setSelectedPOI}
                         routeGeoJSON={routeGeoJSON}
                         isDataFetched={isDataFetched}
+                        webViewRef={webViewRef}
                     />
                 )
             ) : (
