@@ -222,6 +222,8 @@ export const fetchTravelTimeIsochrone = async (
     try {
         const response = await axios.post(url, body, { headers });
 
+        console.log("TravelTime API isochrone response:", response.data);
+
         const shapes = response.data.results[0].shapes;
 
         // Convert all shells and holes into GeoJSON-compatible MultiPolygon coordinates
@@ -270,51 +272,73 @@ export const fetchMapboxRoute = async (
     }
 };
 
-export const fetchTravelTimeRoute = async (
+export const fetchGoogleTravelRoute = async (
     start: [number, number],
     end: [number, number]
 ): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[] }> => {
-    const appId = process.env.EXPO_PUBLIC_TRAVELTIME_APP_ID;
-    const apiKey = process.env.EXPO_PUBLIC_TRAVELTIME_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/directions/json`;
 
-    const url = `https://api.traveltimeapp.com/v4/routes`;
-
-    const body = {
-        locations: [
-            { id: "start", coords: { lat: start[1], lng: start[0] } },
-            { id: "end", coords: { lat: end[1], lng: end[0] } },
-        ],
-        departure_searches: [
-            {
-                id: "public_transport_route",
-                departure_location_id: "start",
-                arrival_location_ids: ["end"],
-                transportation: { type: "public_transport" },
-                departure_time: new Date().toISOString(),
-            },
-        ],
-    };
-
-    const headers = {
-        "Content-Type": "application/json",
-        "X-Application-Id": appId,
-        "X-Api-Key": apiKey,
+    const params = {
+        origin: `${start[1]},${start[0]}`, // Google expects lat,lng format
+        destination: `${end[1]},${end[0]}`,
+        mode: "transit", // Public transport mode
+        key: apiKey,
     };
 
     try {
-        const response = await axios.post(url, body, { headers });
+        const response = await axios.get(url, { params });
 
-        const parts = response.data.results[0].locations[0].properties[0].route.parts.map((part: any) => ({
-            mode: part.mode,
-            coords: part.coords.map((coord: { lat: number; lng: number }) => ({
-                lat: coord.lat,
-                lng: coord.lng,
-            })),
+        // Extract route parts
+        const parts = response.data.routes[0].legs[0].steps.map((step: any) => ({
+            mode: step.travel_mode.toLowerCase(), // "WALKING", "TRANSIT", etc.
+            coords: step.polyline
+                ? decodePolyline(step.polyline.points) // Decode polyline to lat/lng coords
+                : [{ lat: step.start_location.lat, lng: step.start_location.lng }],
         }));
 
         return { parts };
     } catch (error) {
-        console.error("Error fetching TravelTime route:", error);
+        console.error("Error fetching Google Maps route:", error);
         throw error;
     }
+};
+
+//Decodes a Google polyline into an array of lat/lng coordinates.
+const decodePolyline = (encoded: string): { lat: number; lng: number }[] => {
+    let index = 0,
+        lat = 0,
+        lng = 0,
+        coordinates = [];
+
+    while (index < encoded.length) {
+        let shift = 0,
+            result = 0,
+            byte;
+
+        do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        let deltaLat = (result & 1 ? ~(result >> 1) : result >> 1);
+        lat += deltaLat;
+
+        shift = 0;
+        result = 0;
+
+        do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        let deltaLng = (result & 1 ? ~(result >> 1) : result >> 1);
+        lng += deltaLng;
+
+        coordinates.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    }
+
+    return coordinates;
 };

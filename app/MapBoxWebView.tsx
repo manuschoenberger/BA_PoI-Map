@@ -118,6 +118,8 @@ export default function MapBoxWebView({
         train: "rail",
         cycling: "bicycle",
         driving: "car",
+        walking: "pitch",
+        transit: "bus",
     };
 
     // Extract start points of each section for mode icons

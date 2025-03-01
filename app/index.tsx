@@ -22,7 +22,7 @@ import {
     fetchTravelTimeIsochrone,
     Isochrone,
     fetchMapboxRoute,
-    fetchTravelTimeRoute,
+    fetchGoogleTravelRoute,
     fetchGooglePOIDetails,
     fetchOSMPOIDetails,
 } from "./utils/apiServices";
@@ -189,7 +189,7 @@ export default function Index() {
         try {
             let route;
             if (travelMode === "public-transport") {
-                route = await fetchTravelTimeRoute(start, end);
+                route = await fetchGoogleTravelRoute(start, end);
             } else {
                 route = await fetchMapboxRoute(start, end, travelMode);
             }
