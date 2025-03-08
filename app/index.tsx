@@ -24,9 +24,11 @@ import {
     fetchMapboxRoute,
     fetchGoogleTravelRoute,
     fetchGooglePOIDetails,
-    fetchOSMPOIDetails,
+    fetchOSMPOIDetails, fetchTravelTimeRoute,
 } from "./utils/apiServices";
 import indexStyles from "@/app/utils/styles/indexStyles";
+import RouteInstructionsModal from "@/app/RouteInstructionsModal";
+import axios from "axios";
 
 type RouteGeoJSON = {
     parts: { mode: string; coords: { lat: number; lng: number }[] }[];
@@ -51,6 +53,9 @@ export default function Index() {
     const [isDataFetched, setIsDataFetched] = useState(false);
     const [isRouteLoading, setIsRouteLoading] = useState(false);
     const [shouldFitToRoute, setShouldFitToRoute] = useState(false);
+    const [isRouteInstructionsVisible, setIsRouteInstructionsVisible] = useState(false);
+    const [routeInstructions, setRouteInstructions] = useState<string | null>(null);
+    const [isInstructionsLoading, setIsInstructionsLoading] = useState(false);
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -182,6 +187,7 @@ export default function Index() {
 
         setIsRouteLoading(true);
         setShouldFitToRoute(true);
+        setIsInstructionsLoading(true);
 
         const start: [number, number] = [location.longitude, location.latitude];
         const end: [number, number] = [selectedPOI.longitude, selectedPOI.latitude];
@@ -189,11 +195,22 @@ export default function Index() {
         try {
             let route;
             if (travelMode === "public-transport") {
-                route = await fetchGoogleTravelRoute(start, end);
+                try {
+                    route = await fetchTravelTimeRoute(start, end);
+                } catch (error) {
+                    if (axios.isAxiosError(error) && error.response?.status === 422) {
+                        route = await fetchGoogleTravelRoute(start, end);
+                    } else {
+                        throw error;
+                    }
+                }
             } else {
                 route = await fetchMapboxRoute(start, end, travelMode);
             }
             setRouteGeoJSON({ parts: route.parts });
+            setRouteInstructions(route.instructions.join(", "));
+
+            console.log("Route Instructions: ", route.instructions);
 
             // Calculate the bounds of the route
             const coordinates = route.parts.flatMap(part => part.coords.map(coord => [coord.lng, coord.lat]));
@@ -219,6 +236,7 @@ export default function Index() {
             console.error("Error fetching route:", error);
         } finally {
             setIsRouteLoading(false);
+            setIsInstructionsLoading(false);
         }
     };
 
@@ -373,8 +391,16 @@ export default function Index() {
                     isRouteLoading={isRouteLoading}
                     handleShowDetails={handleShowDetails}
                     isDetailsLoading={isDetailsLoading}
+                    setIsRouteInstructionsVisible={setIsRouteInstructionsVisible}
+                    isInstructionsLoading={isInstructionsLoading}
                 />
             )}
+
+            <RouteInstructionsModal
+                isVisible={isRouteInstructionsVisible}
+                onClose={() => setIsRouteInstructionsVisible(false)}
+                summary={routeInstructions}
+            />
 
             <DetailsModal
                 isDetailsModalVisible={isDetailsModalVisible}

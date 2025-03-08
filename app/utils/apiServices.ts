@@ -222,8 +222,6 @@ export const fetchTravelTimeIsochrone = async (
     try {
         const response = await axios.post(url, body, { headers });
 
-        console.log("TravelTime API isochrone response:", response.data);
-
         const shapes = response.data.results[0].shapes;
 
         // Convert all shells and holes into GeoJSON-compatible MultiPolygon coordinates
@@ -249,13 +247,15 @@ export const fetchMapboxRoute = async (
     start: [number, number],
     end: [number, number],
     profile: "driving" | "driving-traffic" | "walking" | "cycling"
-): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[] }> => {
+): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[], instructions: string[] }> => {
     const apiKey = process.env.EXPO_PUBLIC_MAPBOX_API_KEY;
-    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${apiKey}`;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&steps=true&access_token=${apiKey}`;
 
     try {
         const response = await axios.get(url);
         const coordinates = response.data.routes[0].geometry.coordinates;
+
+        const instructions = response.data.routes[0].legs[0].steps.map((step: any) => step.maneuver.instruction);
 
         const parts = [{
             mode: profile,
@@ -265,7 +265,7 @@ export const fetchMapboxRoute = async (
             })),
         }];
 
-        return { parts };
+        return { parts, instructions };
     } catch (error) {
         console.error("Error fetching Mapbox route:", error);
         throw error;
@@ -275,7 +275,7 @@ export const fetchMapboxRoute = async (
 export const fetchGoogleTravelRoute = async (
     start: [number, number],
     end: [number, number]
-): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[] }> => {
+): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[], instructions: string[] }> => {
     const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
     const url = `https://maps.googleapis.com/maps/api/directions/json`;
 
@@ -297,7 +297,17 @@ export const fetchGoogleTravelRoute = async (
                 : [{ lat: step.start_location.lat, lng: step.start_location.lng }],
         }));
 
-        return { parts };
+        // Helper function to recursively extract html_instructions
+        const extractInstructions = (steps: any[]): string[] => {
+            return steps.flatMap((step: any) => [
+                step.html_instructions.replace(/<[^>]+>/g, ''),
+                ...extractInstructions(step.steps || [])
+            ]);
+        };
+
+        const instructions = extractInstructions(response.data.routes[0].legs[0].steps);
+
+        return { parts, instructions };
     } catch (error) {
         console.error("Error fetching Google Maps route:", error);
         throw error;
@@ -341,4 +351,55 @@ const decodePolyline = (encoded: string): { lat: number; lng: number }[] => {
     }
 
     return coordinates;
+};
+
+export const fetchTravelTimeRoute = async (
+    start: [number, number],
+    end: [number, number]
+): Promise<{ parts: { mode: string; coords: { lat: number; lng: number }[] }[], instructions: string[] }> => {
+    const appId = process.env.EXPO_PUBLIC_TRAVELTIME_APP_ID;
+    const apiKey = process.env.EXPO_PUBLIC_TRAVELTIME_API_KEY;
+
+    const url = `https://api.traveltimeapp.com/v4/routes`;
+
+    const body = {
+        locations: [
+            { id: "start", coords: { lat: start[1], lng: start[0] } },
+            { id: "end", coords: { lat: end[1], lng: end[0] } },
+        ],
+        departure_searches: [
+            {
+                id: "public_transport_route",
+                departure_location_id: "start",
+                arrival_location_ids: ["end"],
+                transportation: { type: "public_transport" },
+                departure_time: new Date().toISOString(),
+            },
+        ],
+    };
+
+    const headers = {
+        "Content-Type": "application/json",
+        "X-Application-Id": appId,
+        "X-Api-Key": apiKey,
+    };
+
+    try {
+        const response = await axios.post(url, body, { headers });
+
+        const parts = response.data.results[0].locations[0].properties[0].route.parts.map((part: any) => ({
+            mode: part.mode,
+            coords: part.coords.map((coord: { lat: number; lng: number }) => ({
+                lat: coord.lat,
+                lng: coord.lng,
+            })),
+        }));
+
+        const instructions = response.data.results[0].locations[0].properties[0].route.parts.map((part: any) => part.directions);
+
+        return { parts, instructions };
+    } catch (error) {
+        console.error("Error fetching TravelTime route:", error);
+        throw error;
+    }
 };

@@ -79,6 +79,7 @@ const indexStyles = StyleSheet.create({
     },
     scrollView: {
         maxHeight: "70%",
+        width: "100%",
     },
     detailText: {
         fontSize: 14,
@@ -120,6 +121,20 @@ const indexStyles = StyleSheet.create({
     icon: {
         width: 30,
         height: 30,
+    },
+    instructionItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 10,
+        paddingRight: 10,
+    },
+    instructionIndex: {
+        fontWeight: "bold",
+        marginRight: 5,
+    },
+    instructionText: {
+        fontSize: 16,
+        flexShrink: 1,
     },
 });
 

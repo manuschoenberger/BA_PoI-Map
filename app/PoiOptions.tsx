@@ -10,6 +10,8 @@ type PoiOptionsProps = {
     isRouteLoading: boolean;
     handleShowDetails: () => void;
     isDetailsLoading: boolean;
+    setIsRouteInstructionsVisible: (visible: boolean) => void;
+    isInstructionsLoading: boolean;
 };
 
 export default function PoiOptions({
@@ -19,6 +21,8 @@ export default function PoiOptions({
                                                        isRouteLoading,
                                                        handleShowDetails,
                                                        isDetailsLoading,
+                                                       setIsRouteInstructionsVisible,
+                                                       isInstructionsLoading,
                                                    }: PoiOptionsProps ) {
     return (
         <View style={indexStyles.buttonContainer}>
@@ -36,6 +40,15 @@ export default function PoiOptions({
                     <Image source={{ uri: BUTTON_ICONS.showDetails }} style={indexStyles.icon} />
                 )}
             </Pressable>
+            {routeGeoJSON && (
+                <Pressable onPress={() => setIsRouteInstructionsVisible(true)} style={indexStyles.detailsButton} disabled={isInstructionsLoading}>
+                    {isInstructionsLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                        <Image source={{ uri: BUTTON_ICONS.showInstructions }} style={indexStyles.icon} />
+                    )}
+                </Pressable>
+            )}
         </View>
     );
 };
