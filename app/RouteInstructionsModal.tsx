@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, View, Text, Pressable, ScrollView } from "react-native";
-import indexStyles from "@/app/utils/styles/indexStyles";
+import styles from "@/app/utils/styles/styles";
 
 interface RouteInstructionsModalProps {
     isVisible: boolean;
@@ -17,19 +17,19 @@ export default function RouteInstructionsModal({
 
     return (
         <Modal visible={isVisible} transparent={true} animationType="slide">
-            <View style={indexStyles.modalContainer}>
-                <View style={indexStyles.modalContent}>
-                    <Text style={indexStyles.modalTitle}>Route Instructions</Text>
-                    <ScrollView style={indexStyles.scrollView}>
+            <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Route Instructions</Text>
+                    <ScrollView style={styles.scrollView}>
                         {instructions.map((instruction, index) => (
-                            <View key={index} style={indexStyles.instructionItem}>
-                                <Text style={indexStyles.instructionIndex}>{index + 1}.</Text>
-                                <Text style={indexStyles.instructionText}>{instruction}</Text>
+                            <View key={index} style={styles.instructionItem}>
+                                <Text style={styles.instructionIndex}>{index + 1}.</Text>
+                                <Text style={styles.instructionText}>{instruction}</Text>
                             </View>
                         ))}
                     </ScrollView>
-                    <Pressable onPress={onClose} style={indexStyles.closeButton}>
-                        <Text style={indexStyles.closeButtonText}>Close</Text>
+                    <Pressable onPress={onClose} style={styles.closeButton}>
+                        <Text style={styles.closeButtonText}>Close</Text>
                     </Pressable>
                 </View>
             </View>

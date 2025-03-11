@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-const indexStyles = StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -31,7 +31,6 @@ const indexStyles = StyleSheet.create({
     },
     modalContainer: {
         flex: 1,
-        justifyContent: "center",
         alignItems: "center",
         backgroundColor: "rgba(0, 0, 0, 0.5)",
     },
@@ -78,7 +77,7 @@ const indexStyles = StyleSheet.create({
         alignItems: "center",
     },
     scrollView: {
-        maxHeight: "70%",
+        maxHeight: "75%",
         width: "100%",
     },
     detailText: {
@@ -136,6 +135,69 @@ const indexStyles = StyleSheet.create({
         fontSize: 16,
         flexShrink: 1,
     },
+    modalCard: {
+        height: "80%",
+        width: "85%",
+        maxWidth: 400,
+    },
+    cardActions: {
+        alignSelf: "flex-end",
+        padding: 25,
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        width: "100%",
+    },
+    titleContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    title: {
+        flex: 0.8,
+    },
+    typeIcon: {
+        flex: 0.2,
+        width: 30,
+        height: 30,
+        resizeMode: "contain",
+    },
+    addressContainer: {
+        marginVertical: 20,
+    },
+    addressText: {
+        fontWeight: "bold",
+    },
+    iconContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginVertical: 30,
+    },
+    contactIcon: {
+        width: 30,
+        height: 30,
+        marginHorizontal: 50,
+    },
+    openingHoursContainer: {
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 5,
+        padding: 10,
+        marginVertical: 10,
+    },
+    ratingContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    starsContainer: {
+        flexDirection: "row",
+        marginRight: 5,
+    },
+    ratingText: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#333",
+    },
 });
 
-export default indexStyles;
+export default styles;

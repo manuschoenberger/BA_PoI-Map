@@ -26,9 +26,10 @@ import {
     fetchGooglePOIDetails,
     fetchOSMPOIDetails, fetchTravelTimeRoute,
 } from "./utils/apiServices";
-import indexStyles from "@/app/utils/styles/indexStyles";
+import styles from "@/app/utils/styles/styles";
 import RouteInstructionsModal from "@/app/RouteInstructionsModal";
 import axios from "axios";
+import {PaperProvider} from "react-native-paper";
 
 type RouteGeoJSON = {
     parts: { mode: string; coords: { lat: number; lng: number }[] }[];
@@ -149,7 +150,7 @@ export default function Index() {
 
     if (!location && !errorMsg) {
         return (
-            <View style={indexStyles.loader}>
+            <View style={styles.loader}>
                 <ActivityIndicator size="large" color="#0000ff" />
                 <Text>Fetching location...</Text>
             </View>
@@ -158,7 +159,7 @@ export default function Index() {
 
     if (errorMsg) {
         return (
-            <View style={indexStyles.loader}>
+            <View style={styles.loader}>
                 <Text style={{ color: "red" }}>{errorMsg}</Text>
             </View>
         );
@@ -209,8 +210,6 @@ export default function Index() {
             }
             setRouteGeoJSON({ parts: route.parts });
             setRouteInstructions(route.instructions.join(", "));
-
-            console.log("Route Instructions: ", route.instructions);
 
             // Calculate the bounds of the route
             const coordinates = route.parts.flatMap(part => part.coords.map(coord => [coord.lng, coord.lat]));
@@ -322,92 +321,94 @@ export default function Index() {
     };
 
     return (
-        <SafeAreaView style={indexStyles.container}>
-            {/* Menu Bar */}
-            <View style={indexStyles.menuBar}>
-                <TouchableOpacity onPress={() => setIsModalVisible(true)}>
-                    <Text style={indexStyles.menuButton}>☰</Text>
-                </TouchableOpacity>
-            </View>
+        <PaperProvider>
+            <SafeAreaView style={styles.container}>
+                {/* Menu Bar */}
+                <View style={styles.menuBar}>
+                    <TouchableOpacity onPress={() => setIsModalVisible(true)}>
+                        <Text style={styles.menuButton}>☰</Text>
+                    </TouchableOpacity>
+                </View>
 
-            <OptionsMenu
-                isModalVisible={isModalVisible}
-                setIsModalVisible={setIsModalVisible}
-                tempUseMapBox={tempUseMapBox}
-                setTempUseMapBox={setTempUseMapBox}
-                tempDataSource={tempDataSource}
-                setTempDataSource={setTempDataSource}
-                tempSelectedTime={tempSelectedTime}
-                setTempSelectedTime={setTempSelectedTime}
-                tempTravelMode={tempTravelMode}
-                setTempTravelMode={setTempTravelMode}
-                handleModalClose={handleModalClose}
-                isLoading={isLoading}
-                hasChanges={hasChanges}
-                setHasChanges={setHasChanges}
-                timeOptions={timeOptions}
-                menuOptions={menuOptions}
-                poiOptions={poiOptions}
-                modeOptions={modeOptions}
-            />
-
-            {/* Map Display */}
-            {useMapBox ? (
-                location && isochrone && (
-                    <MapBoxWebView
-                        location={location}
-                        pois={pois}
-                        isochrone={isochrone}
-                        maxRadius={maxRadius}
-                        selectedPOI={selectedPOI}
-                        setSelectedPOI={setSelectedPOI}
-                        routeGeoJSON={routeGeoJSON}
-                        isDataFetched={isDataFetched}
-                        webViewRef={webViewRef}
-                        shouldFitToRoute={shouldFitToRoute}
-                        setShouldFitToRoute={setShouldFitToRoute}
-                    />
-                )
-            ) : (
-                location && isochrone && (
-                    <GoogleMapsMap
-                        location={location}
-                        pois={pois}
-                        isochrone={isochrone}
-                        maxRadius={maxRadius}
-                        selectedPOI={selectedPOI}
-                        setSelectedPOI={setSelectedPOI}
-                        routeGeoJSON={routeGeoJSON}
-                        isDataFetched={isDataFetched}
-                    />
-                )
-            )}
-
-            {selectedPOI && (
-                <PoiOptions
-                    routeGeoJSON={routeGeoJSON}
-                    handleClearRoute={handleClearRoute}
-                    handleFetchRoute={handleFetchRoute}
-                    isRouteLoading={isRouteLoading}
-                    handleShowDetails={handleShowDetails}
-                    isDetailsLoading={isDetailsLoading}
-                    setIsRouteInstructionsVisible={setIsRouteInstructionsVisible}
-                    isInstructionsLoading={isInstructionsLoading}
+                <OptionsMenu
+                    isModalVisible={isModalVisible}
+                    setIsModalVisible={setIsModalVisible}
+                    tempUseMapBox={tempUseMapBox}
+                    setTempUseMapBox={setTempUseMapBox}
+                    tempDataSource={tempDataSource}
+                    setTempDataSource={setTempDataSource}
+                    tempSelectedTime={tempSelectedTime}
+                    setTempSelectedTime={setTempSelectedTime}
+                    tempTravelMode={tempTravelMode}
+                    setTempTravelMode={setTempTravelMode}
+                    handleModalClose={handleModalClose}
+                    isLoading={isLoading}
+                    hasChanges={hasChanges}
+                    setHasChanges={setHasChanges}
+                    timeOptions={timeOptions}
+                    menuOptions={menuOptions}
+                    poiOptions={poiOptions}
+                    modeOptions={modeOptions}
                 />
-            )}
 
-            <RouteInstructionsModal
-                isVisible={isRouteInstructionsVisible}
-                onClose={() => setIsRouteInstructionsVisible(false)}
-                summary={routeInstructions}
-            />
+                {/* Map Display */}
+                {useMapBox ? (
+                    location && isochrone && (
+                        <MapBoxWebView
+                            location={location}
+                            pois={pois}
+                            isochrone={isochrone}
+                            maxRadius={maxRadius}
+                            selectedPOI={selectedPOI}
+                            setSelectedPOI={setSelectedPOI}
+                            routeGeoJSON={routeGeoJSON}
+                            isDataFetched={isDataFetched}
+                            webViewRef={webViewRef}
+                            shouldFitToRoute={shouldFitToRoute}
+                            setShouldFitToRoute={setShouldFitToRoute}
+                        />
+                    )
+                ) : (
+                    location && isochrone && (
+                        <GoogleMapsMap
+                            location={location}
+                            pois={pois}
+                            isochrone={isochrone}
+                            maxRadius={maxRadius}
+                            selectedPOI={selectedPOI}
+                            setSelectedPOI={setSelectedPOI}
+                            routeGeoJSON={routeGeoJSON}
+                            isDataFetched={isDataFetched}
+                        />
+                    )
+                )}
 
-            <DetailsModal
-                isDetailsModalVisible={isDetailsModalVisible}
-                setIsDetailsModalVisible={setIsDetailsModalVisible}
-                poiDetails={poiDetails}
-                normalizeOpeningHours={normalizeOpeningHours}
-            />
-        </SafeAreaView>
+                {selectedPOI && (
+                    <PoiOptions
+                        routeGeoJSON={routeGeoJSON}
+                        handleClearRoute={handleClearRoute}
+                        handleFetchRoute={handleFetchRoute}
+                        isRouteLoading={isRouteLoading}
+                        handleShowDetails={handleShowDetails}
+                        isDetailsLoading={isDetailsLoading}
+                        setIsRouteInstructionsVisible={setIsRouteInstructionsVisible}
+                        isInstructionsLoading={isInstructionsLoading}
+                    />
+                )}
+
+                <RouteInstructionsModal
+                    isVisible={isRouteInstructionsVisible}
+                    onClose={() => setIsRouteInstructionsVisible(false)}
+                    summary={routeInstructions}
+                />
+
+                <DetailsModal
+                    isDetailsModalVisible={isDetailsModalVisible}
+                    setIsDetailsModalVisible={setIsDetailsModalVisible}
+                    poiDetails={poiDetails}
+                    normalizeOpeningHours={normalizeOpeningHours}
+                />
+            </SafeAreaView>
+        </PaperProvider>
     );
 }

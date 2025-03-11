@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import indexStyles from "@/app/utils/styles/indexStyles";
+import styles from "@/app/utils/styles/styles";
 
 type OptionsMenuProps = {
     isModalVisible: boolean;
@@ -51,11 +51,11 @@ export default function OptionsMenu({
             visible={isModalVisible}
             onRequestClose={() => setIsModalVisible(false)}
         >
-            <View style={indexStyles.modalContainer}>
-                <View style={indexStyles.modalContent}>
-                    <ScrollView contentContainerStyle={indexStyles.scrollViewContent}>
-                        <View style={indexStyles.section}>
-                            <Text style={indexStyles.modalTitle}>Select Map</Text>
+            <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                    <ScrollView contentContainerStyle={styles.scrollViewContent}>
+                        <View style={styles.section}>
+                            <Text style={styles.modalTitle}>Select Map</Text>
                             {menuOptions.map((item) => (
                                 <Pressable
                                     key={item.label}
@@ -64,14 +64,14 @@ export default function OptionsMenu({
                                         setHasChanges(true);
                                     }}
                                 >
-                                    <Text style={indexStyles.radioOption}>
+                                    <Text style={styles.radioOption}>
                                         {tempUseMapBox === item.value ? "◉" : "○"} {item.label}
                                     </Text>
                                 </Pressable>
                             ))}
                         </View>
-                        <View style={indexStyles.section}>
-                            <Text style={indexStyles.modalTitle}>Select POI Source</Text>
+                        <View style={styles.section}>
+                            <Text style={styles.modalTitle}>Select POI Source</Text>
                             {poiOptions.map((item) => (
                                 <Pressable
                                     key={item.label}
@@ -80,23 +80,23 @@ export default function OptionsMenu({
                                         setHasChanges(true);
                                     }}
                                 >
-                                    <Text style={indexStyles.radioOption}>
+                                    <Text style={styles.radioOption}>
                                         {tempDataSource === item.value ? "◉" : "○"} {item.label}
                                     </Text>
                                 </Pressable>
                             ))}
                         </View>
-                        <View style={indexStyles.section}>
-                            <Text style={indexStyles.modalTitle}>Select Isochrone Time</Text>
-                            <View style={indexStyles.pickerContainer}>
+                        <View style={styles.section}>
+                            <Text style={styles.modalTitle}>Select Isochrone Time</Text>
+                            <View style={styles.pickerContainer}>
                                 <Picker
                                     selectedValue={tempSelectedTime}
                                     onValueChange={(value) => {
                                         setTempSelectedTime(value);
                                         setHasChanges(true);
                                     }}
-                                    style={indexStyles.picker}
-                                    itemStyle={indexStyles.pickerItem}
+                                    style={styles.picker}
+                                    itemStyle={styles.pickerItem}
                                 >
                                     {timeOptions.map((time) => (
                                         <Picker.Item key={time} label={`${time} min`} value={time} />
@@ -104,8 +104,8 @@ export default function OptionsMenu({
                                 </Picker>
                             </View>
                         </View>
-                        <View style={indexStyles.section}>
-                            <Text style={indexStyles.modalTitle}>Select Travel Mode</Text>
+                        <View style={styles.section}>
+                            <Text style={styles.modalTitle}>Select Travel Mode</Text>
                             {modeOptions.map((item) => (
                                 <Pressable
                                     key={item.label}
@@ -114,17 +114,17 @@ export default function OptionsMenu({
                                         setHasChanges(true);
                                     }}
                                 >
-                                    <Text style={indexStyles.radioOption}>
+                                    <Text style={styles.radioOption}>
                                         {tempTravelMode === item.value ? "◉" : "○"} {item.label}
                                     </Text>
                                 </Pressable>
                             ))}
                         </View>
-                        <Pressable onPress={handleModalClose} style={indexStyles.closeButton}>
+                        <Pressable onPress={handleModalClose} style={styles.closeButton}>
                             {isLoading ? (
                                 <ActivityIndicator size="small" color="#fff" />
                             ) : (
-                                <Text style={indexStyles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
+                                <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
                             )}
                         </Pressable>
                     </ScrollView>

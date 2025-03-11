@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Pressable, ActivityIndicator, Image } from "react-native";
-import indexStyles from "@/app/utils/styles/indexStyles";
+import styles from "@/app/utils/styles/styles";
 import { BUTTON_ICONS } from './utils/buttonIcons';
 
 type PoiOptionsProps = {
@@ -25,27 +25,27 @@ export default function PoiOptions({
                                                        isInstructionsLoading,
                                                    }: PoiOptionsProps ) {
     return (
-        <View style={indexStyles.buttonContainer}>
-            <Pressable onPress={routeGeoJSON ? handleClearRoute : handleFetchRoute} style={indexStyles.detailsButton} disabled={isRouteLoading}>
+        <View style={styles.buttonContainer}>
+            <Pressable onPress={routeGeoJSON ? handleClearRoute : handleFetchRoute} style={styles.detailsButton} disabled={isRouteLoading}>
                 {isRouteLoading ? (
                     <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                    <Image source={{ uri: routeGeoJSON ? BUTTON_ICONS.clearRoute : BUTTON_ICONS.directions }} style={indexStyles.icon} />
+                    <Image source={{ uri: routeGeoJSON ? BUTTON_ICONS.clearRoute : BUTTON_ICONS.directions }} style={styles.icon} />
                 )}
             </Pressable>
-            <Pressable onPress={handleShowDetails} style={indexStyles.detailsButton} disabled={isDetailsLoading}>
+            <Pressable onPress={handleShowDetails} style={styles.detailsButton} disabled={isDetailsLoading}>
                 {isDetailsLoading ? (
                     <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                    <Image source={{ uri: BUTTON_ICONS.showDetails }} style={indexStyles.icon} />
+                    <Image source={{ uri: BUTTON_ICONS.showDetails }} style={styles.icon} />
                 )}
             </Pressable>
             {routeGeoJSON && (
-                <Pressable onPress={() => setIsRouteInstructionsVisible(true)} style={indexStyles.detailsButton} disabled={isInstructionsLoading}>
+                <Pressable onPress={() => setIsRouteInstructionsVisible(true)} style={styles.detailsButton} disabled={isInstructionsLoading}>
                     {isInstructionsLoading ? (
                         <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                        <Image source={{ uri: BUTTON_ICONS.showInstructions }} style={indexStyles.icon} />
+                        <Image source={{ uri: BUTTON_ICONS.showInstructions }} style={styles.icon} />
                     )}
                 </Pressable>
             )}
