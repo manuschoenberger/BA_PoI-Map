@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     scrollView: {
-        maxHeight: "75%",
+        maxHeight: "80%",
         width: "100%",
     },
     detailText: {
@@ -140,9 +140,13 @@ const styles = StyleSheet.create({
         width: "85%",
         maxWidth: 400,
     },
+    cardContent: {
+        flexGrow: 1,
+    },
     cardActions: {
         alignSelf: "flex-end",
-        padding: 25,
+        paddingRight: 20,
+        paddingVertical: 0,
         flexDirection: "row",
         justifyContent: "flex-end",
         width: "100%",
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
     },
     title: {
-        flex: 0.8,
+        flex: 1.2,
     },
     typeIcon: {
         flex: 0.2,

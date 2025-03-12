@@ -1,8 +1,8 @@
 import React from "react";
-import {View, ScrollView, Image, Linking, TouchableOpacity} from "react-native";
+import { View, ScrollView, Image, Linking, TouchableOpacity } from "react-native";
 import { Modal, Portal, Button, ActivityIndicator, Card, Title, Paragraph } from "react-native-paper";
 import styles from "@/app/utils/styles/styles";
-import {POI_ICONS} from "@/app/utils/poiIcons";
+import { POI_ICONS } from "@/app/utils/poiIcons";
 import { Icon } from "react-native-paper";
 
 type DetailsModalProps = {
@@ -44,7 +44,7 @@ export default function DetailsModal({
                 contentContainerStyle={styles.modalContainer}
             >
                 <Card style={styles.modalCard}>
-                    <Card.Content>
+                    <Card.Content style={styles.cardContent}>
                         <View style={styles.titleContainer}>
                             <Title style={styles.title}>{poiDetails?.name}</Title>
                             {poiDetails?.type && (
@@ -106,10 +106,10 @@ export default function DetailsModal({
                                 <ActivityIndicator animating={true} />
                             )}
                         </ScrollView>
-                        <Card.Actions style={styles.cardActions}>
-                            <Button onPress={() => setIsDetailsModalVisible(false)}>Close</Button>
-                        </Card.Actions>
                     </Card.Content>
+                    <Card.Actions style={styles.cardActions}>
+                        <Button onPress={() => setIsDetailsModalVisible(false)} mode="contained">Close</Button>
+                    </Card.Actions>
                 </Card>
             </Modal>
         </Portal>
