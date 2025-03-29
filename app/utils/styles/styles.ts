@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 18,
         fontWeight: "bold",
-        marginBottom: 10,
+        marginBottom: 5,
     },
     radioOption: {
         fontSize: 16,
@@ -104,6 +104,9 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         borderWidth: 1,
         borderColor: "#ddd",
+    },
+    sectionTitle: {
+        marginTop: 50,
     },
     detailsButton: {
         width: 60,

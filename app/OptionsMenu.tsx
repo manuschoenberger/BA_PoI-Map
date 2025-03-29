@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal } from "react-native";
+import { ScrollView } from "react-native";
+import { Modal, Portal, Card, Button, Text, RadioButton, ActivityIndicator } from "react-native-paper";
 import { Picker } from "@react-native-picker/picker";
 import styles from "@/app/utils/styles/styles";
 
@@ -43,93 +44,48 @@ export default function OptionsMenu({
                                         menuOptions,
                                         poiOptions,
                                         modeOptions,
-                                    }: OptionsMenuProps ) {
+                                    }: OptionsMenuProps) {
     return (
-        <Modal
-            animationType="slide"
-            transparent={true}
-            visible={isModalVisible}
-            onRequestClose={() => setIsModalVisible(false)}
-        >
-            <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                    <ScrollView contentContainerStyle={styles.scrollViewContent}>
-                        <View style={styles.section}>
-                            <Text style={styles.modalTitle}>Select Map</Text>
-                            {menuOptions.map((item) => (
-                                <Pressable
-                                    key={item.label}
-                                    onPress={() => {
-                                        setTempUseMapBox(item.value);
-                                        setHasChanges(true);
-                                    }}
-                                >
-                                    <Text style={styles.radioOption}>
-                                        {tempUseMapBox === item.value ? "◉" : "○"} {item.label}
-                                    </Text>
-                                </Pressable>
-                            ))}
-                        </View>
-                        <View style={styles.section}>
-                            <Text style={styles.modalTitle}>Select POI Source</Text>
-                            {poiOptions.map((item) => (
-                                <Pressable
-                                    key={item.label}
-                                    onPress={() => {
-                                        setTempDataSource(item.value as "google" | "osm");
-                                        setHasChanges(true);
-                                    }}
-                                >
-                                    <Text style={styles.radioOption}>
-                                        {tempDataSource === item.value ? "◉" : "○"} {item.label}
-                                    </Text>
-                                </Pressable>
-                            ))}
-                        </View>
-                        <View style={styles.section}>
-                            <Text style={styles.modalTitle}>Select Isochrone Time</Text>
-                            <View style={styles.pickerContainer}>
-                                <Picker
-                                    selectedValue={tempSelectedTime}
-                                    onValueChange={(value) => {
-                                        setTempSelectedTime(value);
-                                        setHasChanges(true);
-                                    }}
-                                    style={styles.picker}
-                                    itemStyle={styles.pickerItem}
-                                >
-                                    {timeOptions.map((time) => (
-                                        <Picker.Item key={time} label={`${time} min`} value={time} />
-                                    ))}
-                                </Picker>
-                            </View>
-                        </View>
-                        <View style={styles.section}>
-                            <Text style={styles.modalTitle}>Select Travel Mode</Text>
-                            {modeOptions.map((item) => (
-                                <Pressable
-                                    key={item.label}
-                                    onPress={() => {
-                                        setTempTravelMode(item.value);
-                                        setHasChanges(true);
-                                    }}
-                                >
-                                    <Text style={styles.radioOption}>
-                                        {tempTravelMode === item.value ? "◉" : "○"} {item.label}
-                                    </Text>
-                                </Pressable>
-                            ))}
-                        </View>
-                        <Pressable onPress={handleModalClose} style={styles.closeButton}>
-                            {isLoading ? (
-                                <ActivityIndicator size="small" color="#fff" />
-                            ) : (
-                                <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>
-                            )}
-                        </Pressable>
-                    </ScrollView>
-                </View>
-            </View>
-        </Modal>
+        <Portal>
+            <Modal visible={isModalVisible} onDismiss={() => setIsModalVisible(false)} contentContainerStyle={styles.modalContainer}>
+                <Card style={styles.modalCard}>
+                    <Card.Content style={styles.cardContent}>
+                        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+                            <Text style={[styles.modalTitle, styles.sectionTitle]}>Select Map</Text>
+                            <RadioButton.Group onValueChange={(value) => { setTempUseMapBox(value === "true"); setHasChanges(true); }} value={tempUseMapBox.toString()}>
+                                {menuOptions.map((item) => (
+                                    <RadioButton.Item key={item.label} label={item.label} value={item.value.toString()} />
+                                ))}
+                            </RadioButton.Group>
+
+                            <Text style={[styles.modalTitle, styles.sectionTitle]}>Select POI Source</Text>
+                            <RadioButton.Group onValueChange={(value) => { setTempDataSource(value as "google" | "osm"); setHasChanges(true); }} value={tempDataSource}>
+                                {poiOptions.map((item) => (
+                                    <RadioButton.Item key={item.label} label={item.label} value={item.value} />
+                                ))}
+                            </RadioButton.Group>
+
+                            <Text style={[styles.modalTitle, styles.sectionTitle]}>Select Travel Time</Text>
+                            <Picker selectedValue={tempSelectedTime} onValueChange={(value) => { setTempSelectedTime(value); setHasChanges(true); }} style={styles.picker} itemStyle={styles.pickerItem}>
+                                {timeOptions.map((time) => (
+                                    <Picker.Item key={time} label={`${time} min`} value={time} />
+                                ))}
+                            </Picker>
+
+                            <Text style={[styles.modalTitle, styles.sectionTitle]}>Select Travel Mode</Text>
+                            <RadioButton.Group onValueChange={(value) => { setTempTravelMode(value as "driving" | "driving-traffic" | "walking" | "cycling" | "public-transport"); setHasChanges(true); }} value={tempTravelMode}>
+                                {modeOptions.map((item) => (
+                                    <RadioButton.Item key={item.label} label={item.label} value={item.value} />
+                                ))}
+                            </RadioButton.Group>
+
+                            <Button onPress={handleModalClose} mode="contained" style={styles.closeButton}>
+                                {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.closeButtonText}>{hasChanges ? "Apply & Close" : "Close"}</Text>}
+                            </Button>
+                        </ScrollView>
+                    </Card.Content>
+                </Card>
+            </Modal>
+        </Portal>
     );
-};
+}
