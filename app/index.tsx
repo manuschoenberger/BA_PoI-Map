@@ -57,6 +57,7 @@ export default function Index() {
     const [isRouteInstructionsVisible, setIsRouteInstructionsVisible] = useState(false);
     const [routeInstructions, setRouteInstructions] = useState<string | null>(null);
     const [isInstructionsLoading, setIsInstructionsLoading] = useState(false);
+    const [tempLocation, setTempLocation] = useState<Location.LocationObjectCoords | null>(null);
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -253,6 +254,10 @@ export default function Index() {
         setSelectedTime(tempSelectedTime);
         setTravelMode(tempTravelMode);
 
+        if (tempLocation) {
+            setLocation(tempLocation);
+        }
+
         // Fetch data based on the new settings
         if (location) {
             try {
@@ -349,6 +354,9 @@ export default function Index() {
                     menuOptions={menuOptions}
                     poiOptions={poiOptions}
                     modeOptions={modeOptions}
+                    setLocation={setLocation}
+                    tempLocation={tempLocation}
+                    setTempLocation={setTempLocation}
                 />
 
                 {/* Map Display */}

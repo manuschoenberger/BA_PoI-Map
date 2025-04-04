@@ -403,3 +403,15 @@ export const fetchTravelTimeRoute = async (
         throw error;
     }
 };
+
+export const geocodeAddress = async (address: string): Promise<{ latitude: number; longitude: number }> => {
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+    const response = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json`, {
+        params: {
+            address,
+            key: apiKey,
+        },
+    });
+    const location = response.data.results[0].geometry.location;
+    return { latitude: location.lat, longitude: location.lng };
+};

@@ -5,7 +5,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     menuBar: {
-        backgroundColor: "#007aff",
+        backgroundColor: "#51bbd6",
         height: 50,
         justifyContent: "center",
         paddingHorizontal: 16,
@@ -204,6 +204,27 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
         color: "#333",
+    },
+    geocodeButton: {
+        marginTop: 10,
+        padding: 10,
+        backgroundColor: "#51bbd6",
+        borderRadius: 5,
+        alignItems: "center",
+    },
+    textInput: {
+        marginVertical: 10,
+    },
+    geocodeButtonText: {
+        color: "#fff",
+        fontSize: 16,
+    },
+    resetButton: {
+        marginTop: 10,
+        padding: 10,
+        backgroundColor: "#d65151",
+        borderRadius: 5,
+        alignItems: "center",
     },
 });
 
