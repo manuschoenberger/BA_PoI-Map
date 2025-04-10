@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
-import { Modal, Portal, Card, Button, Text, RadioButton, ActivityIndicator, TextInput } from "react-native-paper";
+import {
+    Modal,
+    Portal,
+    Card,
+    Button,
+    Text,
+    RadioButton,
+    ActivityIndicator,
+    TextInput,
+    Checkbox
+} from "react-native-paper";
 import { Picker } from "@react-native-picker/picker";
 import styles from "@/app/utils/styles/styles";
 import * as Location from "expo-location";
@@ -28,6 +38,54 @@ type OptionsMenuProps = {
     setLocation: (coords: Location.LocationObjectCoords | null) => void;
     tempLocation: Location.LocationObjectCoords | null;
     setTempLocation: (coords: Location.LocationObjectCoords | null) => void;
+    setTempSelectedTypes: (types: string[]) => void;
+    tempSelectedTypes: string[];
+};
+
+const googleTypes: Record<string, string> = {
+    tourist_attraction: "Tourist Spot",
+    museum: "Museum",
+    park: "Park",
+    restaurant: "Restaurant",
+    cafe: "Cafe",
+    shopping_mall: "Shopping Mall",
+    zoo: "Zoo",
+    amusement_park: "Amusement Park",
+    aquarium: "Aquarium",
+    art_gallery: "Art Gallery",
+    night_club: "Night Club",
+    casino: "Casino",
+    bar: "Bar",
+    bowling_alley: "Bowling Alley",
+    campground: "Campground",
+    car_rental: "Car Rental",
+    pharmacy: "Pharmacy",
+    clothing_store: "Clothing Store",
+    convenience_store: "Convenience Store",
+    book_store: "Book Store",
+    department_store: "Department Store",
+    doctor: "Doctor",
+    drugstore: "Drugstore",
+    shoe_store: "Shoe Store",
+    electronics_store: "Electronics Store",
+    spa: "Spa",
+    store: "Store",
+    gas_station: "Gas Station",
+    supermarket: "Supermarket",
+    gym: "Gym",
+    hardware_store: "Hardware Store",
+    hospital: "Hospital",
+    jewelry_store: "Jewelry Store",
+};
+
+const osmTypes: Record<string, string> = {
+    restaurant: "Restaurant",
+    cafe: "Cafe",
+    park: "Park",
+    museum: "Museum",
+    hotel: "Hotel",
+    tourist_attraction: "Tourist Spot",
+    store: "Store",
 };
 
 export default function OptionsMenu({
@@ -49,14 +107,15 @@ export default function OptionsMenu({
                                         menuOptions,
                                         poiOptions,
                                         modeOptions,
-                                        setLocation,
-                                        tempLocation,
+                                        setTempSelectedTypes,
+                                        tempSelectedTypes,
                                         setTempLocation,
                                     }: OptionsMenuProps) {
     const [address, setAddress] = useState("");
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
     const [isResettingLocation, setIsResettingLocation] = useState(false);
+    const [isTypeDropdownVisible, setIsTypeDropdownVisible] = useState(false);
 
     const handleGeocodeAddress = async () => {
         setIsGeocoding(true);
@@ -96,6 +155,16 @@ export default function OptionsMenu({
         }
     };
 
+    const availableTypes = tempDataSource === "google" ? googleTypes : osmTypes;
+
+    const toggleTypeSelection = (type: string) => {
+        if (tempSelectedTypes.includes(type)) {
+            setTempSelectedTypes(tempSelectedTypes.filter((t) => t !== type));
+        } else {
+            setTempSelectedTypes([...tempSelectedTypes, type]);
+        }
+    };
+
     return (
         <Portal>
             <Modal visible={isModalVisible} onDismiss={() => setIsModalVisible(false)} contentContainerStyle={styles.modalContainer}>
@@ -115,6 +184,10 @@ export default function OptionsMenu({
                                     <RadioButton.Item key={item.label} label={item.label} value={item.value} />
                                 ))}
                             </RadioButton.Group>
+
+                            <Button onPress={() => setIsTypeDropdownVisible(true)} mode="contained" style={styles.geocodeButton}>
+                                Select POI Types
+                            </Button>
 
                             <Text style={[styles.modalTitle, styles.sectionTitle]}>Select Travel Time</Text>
                             <Picker selectedValue={tempSelectedTime} onValueChange={(value) => { setTempSelectedTime(value); setHasChanges(true); }} style={styles.picker} itemStyle={styles.pickerItem}>
@@ -162,6 +235,30 @@ export default function OptionsMenu({
                     </Card.Content>
                 </Card>
             </Modal>
+
+            <Modal visible={isTypeDropdownVisible} onDismiss={() => setIsTypeDropdownVisible(false)} contentContainerStyle={styles.modalContainer}>
+                <Card style={styles.modalCard}>
+                    <Card.Content style={styles.cardContent}>
+                        <Text style={styles.modalTitle}>Select POI Types</Text>
+                        <ScrollView style={{ maxHeight: 450 }}>
+                            {Object.keys(availableTypes).map((type) => (
+                                <View key={type} style={{ flexDirection: "row", alignItems: "center" }}>
+                                    <Checkbox
+                                        status={tempSelectedTypes.includes(type) ? "checked" : "unchecked"}
+                                        onPress={() => toggleTypeSelection(type)}
+                                    />
+                                    <Text>{availableTypes[type]}</Text>
+                                </View>
+                            ))}
+                        </ScrollView>
+                        <Button onPress={() => setIsTypeDropdownVisible(false)} mode="contained" style={styles.closeButton}>
+                            Close
+                        </Button>
+                    </Card.Content>
+                </Card>
+            </Modal>
         </Portal>
     );
 }
+
+export { googleTypes, osmTypes };

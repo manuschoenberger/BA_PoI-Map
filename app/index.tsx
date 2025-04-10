@@ -30,6 +30,7 @@ import styles from "@/app/utils/styles/styles";
 import RouteInstructionsModal from "@/app/RouteInstructionsModal";
 import axios from "axios";
 import {PaperProvider} from "react-native-paper";
+import { googleTypes } from "@/app/OptionsMenu";
 
 type RouteGeoJSON = {
     parts: { mode: string; coords: { lat: number; lng: number }[] }[];
@@ -58,6 +59,7 @@ export default function Index() {
     const [routeInstructions, setRouteInstructions] = useState<string | null>(null);
     const [isInstructionsLoading, setIsInstructionsLoading] = useState(false);
     const [tempLocation, setTempLocation] = useState<Location.LocationObjectCoords | null>(null);
+    const [selectedTypes, setSelectedTypes] = useState<string[]>(Object.keys(googleTypes));
 
     // Temporary state variables for modal options
     const [tempUseMapBox, setTempUseMapBox] = useState(useMapBox);
@@ -133,9 +135,9 @@ export default function Index() {
                 try {
                     let data: POI[];
                     if (dataSource === "google") {
-                        data = await fetchGooglePOIs(location.latitude, location.longitude);
+                        data = await fetchGooglePOIs(location.latitude, location.longitude, selectedTypes);
                     } else {
-                        data = await fetchOSMPOIs(location.latitude, location.longitude);
+                        data = await fetchOSMPOIs(location.latitude, location.longitude, selectedTypes);
                     }
 
                     const filteredPOIs = filterPOIsWithinIsochrone(data, isochrone);
@@ -147,7 +149,7 @@ export default function Index() {
 
             fetchData();
         }
-    }, [location, isochrone, dataSource]);
+    }, [location, isochrone, dataSource, selectedTypes]);
 
     if (!location && !errorMsg) {
         return (
@@ -271,9 +273,9 @@ export default function Index() {
 
                 let poisData: POI[];
                 if (tempDataSource === "google") {
-                    poisData = await fetchGooglePOIs(location.latitude, location.longitude);
+                    poisData = await fetchGooglePOIs(location.latitude, location.longitude, selectedTypes);
                 } else {
-                    poisData = await fetchOSMPOIs(location.latitude, location.longitude);
+                    poisData = await fetchOSMPOIs(location.latitude, location.longitude, selectedTypes);
                 }
 
                 const filteredPOIs = filterPOIsWithinIsochrone(poisData, data);
@@ -356,6 +358,8 @@ export default function Index() {
                     modeOptions={modeOptions}
                     setLocation={setLocation}
                     tempLocation={tempLocation}
+                    setTempSelectedTypes={setSelectedTypes}
+                    tempSelectedTypes={selectedTypes}
                     setTempLocation={setTempLocation}
                 />
 

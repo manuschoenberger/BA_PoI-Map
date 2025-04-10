@@ -16,27 +16,15 @@ export interface Isochrone {
     coordinates: [number, number][][][]; // Array of MultiPolygon coordinates
 }
 
-// Fetch POIs from Google Maps
-const touristTypes = [
-    "tourist_attraction",
-    "museum",
-    "park",
-    "restaurant",
-    "cafe",
-    "shopping_mall",
-    "zoo",
-    "amusement_park",
-    "aquarium",
-    "art_gallery",
-    "night_club",
-    "casino",
-];
-
-export const fetchGooglePOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
+export const fetchGooglePOIs = async (
+    latitude: number,
+    longitude: number,
+    selectedTypes: string[]
+): Promise<POI[]> => {
     const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
     const radius = 49999; // Fetch within 50 km
 
-    const requests = touristTypes.map((type) => {
+    const requests = selectedTypes.map((type) => {
         const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${apiKey}`;
         return axios.get(url);
     });
@@ -58,32 +46,21 @@ export const fetchGooglePOIs = async (latitude: number, longitude: number): Prom
 };
 
 // Fetch POIs from OpenStreetMap
-export const fetchOSMPOIs = async (latitude: number, longitude: number): Promise<POI[]> => {
+export const fetchOSMPOIs = async (
+    latitude: number,
+    longitude: number,
+    selectedTypes: string[]
+): Promise<POI[]> => {
     const radius = 70000;
-    const amenityFilters = [
-        "restaurant",
-        "cafe",
-        "park",
-        "museum",
-        "hotel",
-        "tourist_attraction",
-    ].join("|");
+    const amenityFilters = selectedTypes.join("|");
 
-    const tourismFilters = [
-        "hotel",
-        "museum",
-        "attraction",
-    ].join("|");
-
-    // Construct the Overpass API query with filtering by amenities and tourism
-    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity~"${amenityFilters}"](around:${radius},${latitude},${longitude});node[tourism~"${tourismFilters}"](around:${radius},${latitude},${longitude});out;`;
+    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[amenity~"${amenityFilters}"](around:${radius},${latitude},${longitude});out;`;
 
     try {
         const response = await axios.get(url);
 
-        // Filter and map the response
         return response.data.elements
-            .filter((element: any) => element.tags.name) // Include only named POIs
+            .filter((element: any) => element.tags.name)
             .map((element: any) => ({
                 id: element.id,
                 name: element.tags.name,
